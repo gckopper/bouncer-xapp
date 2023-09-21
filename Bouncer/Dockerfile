@@ -143,5 +143,5 @@ ENV RMR_RTG_SVC="9999" \
 
 # CMD python3 /etc/xapp/init_script.py $CONFIG_FILE
 # CMD ["sleep", "360000"]
-CMD while true; do sleep 3600; done
-# CMD ["b_xapp_main"]
+# CMD while true; do sleep 3600; done
+CMD ["b_xapp_main"]

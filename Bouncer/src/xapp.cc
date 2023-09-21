@@ -70,14 +70,14 @@ void Xapp::startup(SubscriptionHandler &sub_ref) {
 
 	subhandler_ref = &sub_ref;
 	// set_rnib_gnblist();
-	fetch_connected_nodeb_list();
+	// fetch_connected_nodeb_list();
 
 	startup_registration_request(); // throws std::exception
 
 	startup_http_listener();	// throws std::exception
 
 	//send subscriptions.
-	startup_subscribe_requests(); // throws std::exception
+	// startup_subscribe_requests(); // throws std::exception
 
 	//read A1 policies
 	//startup_get_policies();
