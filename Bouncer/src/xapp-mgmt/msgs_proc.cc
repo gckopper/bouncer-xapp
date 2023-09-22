@@ -98,6 +98,8 @@ bool XappMsgHandler::a1_policy_handler(char * message, int *message_len, a1_poli
     sb.Clear();
     validator.GetInvalidDocumentPointer().StringifyUriFragment(sb);
     mdclog_write(MDCLOG_ERR, "Error: %s, %d :: Invalid document: %s\n", __FILE__, __LINE__, sb.GetString());
+
+    return false;
   }
 
   mdclog_write(MDCLOG_INFO, "%s, %d :: Decoding A1 JSON message: %s\n", __FILE__, __LINE__, message);
