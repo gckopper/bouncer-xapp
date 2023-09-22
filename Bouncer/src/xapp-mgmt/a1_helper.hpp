@@ -26,6 +26,7 @@
 #ifndef SRC_XAPP_MGMT_A1MSG_A1_POLICY_HELPER_HPP_
 #define SRC_XAPP_MGMT_A1MSG_A1_POLICY_HELPER_HPP_
 
+#include <vector>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
@@ -34,7 +35,19 @@
 using namespace rapidjson;
 
 typedef struct a1_policy_helper a1_policy_helper;
+typedef struct ue_rc_helper ue_rc_helper;
 
+struct ue_rc_helper {
+    int ue_index;
+    int max_prb;
+};
+
+struct a1_policy_helper{
+    int policy_type_id;
+    std::vector<std::shared_ptr<ue_rc_helper>> ue_list;
+};
+
+/* original bouncer xapp
 struct a1_policy_helper{
 
 	std::string operation;
@@ -44,6 +57,7 @@ struct a1_policy_helper{
 	std::string status;
 
 };
+*/
 
 
 #endif /* SRC_XAPP_FORMATS_A1MSG_A1_POLICY_HELPER_HPP_ */

@@ -72,15 +72,15 @@ void Xapp::startup(SubscriptionHandler &sub_ref) {
 	// set_rnib_gnblist();
 	// fetch_connected_nodeb_list();
 
-	startup_registration_request(); // throws std::exception
+	// startup_registration_request(); // throws std::exception
 
-	startup_http_listener();	// throws std::exception
+	// startup_http_listener();	// throws std::exception
 
 	//send subscriptions.
 	// startup_subscribe_requests(); // throws std::exception
 
 	//read A1 policies
-	//startup_get_policies();
+	startup_get_policies();
 	return;
 }
 
@@ -383,8 +383,31 @@ void Xapp::startup_subscribe_requests(){
 }
 
 void Xapp::startup_get_policies(void){
+	mdclog_write(MDCLOG_INFO, "%s:%d :: Starting up A1 policies\n", __FILE__, __LINE__);
 
-    int policy_id = BOUNCER_POLICY_ID;
+	// reading the schema file
+	const char *schema_file = "/etc/xapp/mwc-xapp-policy.json";	// FIXME this is hard coded according to the Dockerfile
+	std::ifstream f(schema_file);
+	std::string schema_str;
+	if (!f) {
+		mdclog_write(MDCLOG_ERR, "Error: %s:%d :: Unable to open the schema file %s\n", __FILE__, __LINE__, schema_file);
+		throw std::runtime_error("Unable to open the schema file");
+	}
+	std::ostringstream ss;
+	ss << f.rdbuf();
+	schema_str = ss.str();
+
+	rapidjson::Document sd;
+	if (sd.Parse(schema_str.c_str()).HasParseError()) {
+		mdclog_write(MDCLOG_ERR, "Error: %s:%d :: The schema is not a valid JSON: %s\n", __FILE__, __LINE__, schema_str.c_str());
+		throw std::runtime_error("The schema is not a valid JSON");
+	}
+
+	// SchemaDocument schema(sd);
+	schema_document = make_shared<SchemaDocument>(sd);
+
+    // int policy_id = BOUNCER_POLICY_ID;
+	int policy_id = 20008;	// FIXME hard coded, shoudld come from xapp descriptor file
 
     std::string policy_query = "{\"policy_type_id\":" + std::to_string(policy_id) + "}";
     unsigned char * message = (unsigned char *)calloc(policy_query.length(), sizeof(unsigned char));

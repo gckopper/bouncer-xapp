@@ -110,7 +110,7 @@ RUN export CPATH=$CPATH:/usr/local/include && \
     make clean && \
     make -j 4 install
 
-COPY ${SCHEMA_PATH}/* init/routes.txt init/config-map.yaml /etc/xapp/
+COPY ${SCHEMA_PATH}/* init/routes.txt init/config-map.yaml schemas/mwc-xapp-policy.json /etc/xapp/
 # COPY init/init_script.py /etc/xapp/init_script.py
 
 

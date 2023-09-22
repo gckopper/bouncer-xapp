@@ -49,14 +49,15 @@ class XappMsgHandler{
 private:
 	std::string xapp_id;
 	SubscriptionHandler *_ref_sub_handler;
+	shared_ptr<SchemaDocument> policy_schema;
 public:
 	//constructor for xapp_id.
 	 XappMsgHandler(std::string xid){xapp_id=xid; _ref_sub_handler=NULL;};
-	 XappMsgHandler(std::string xid, SubscriptionHandler &subhandler){xapp_id=xid; _ref_sub_handler=&subhandler;};
+	 XappMsgHandler(std::string xid, SubscriptionHandler &subhandler, shared_ptr<SchemaDocument> schema){xapp_id=xid; _ref_sub_handler=&subhandler; policy_schema=schema;};
 
 	 void operator() (rmr_mbuf_t *, bool*);
 
-	 void register_handler();
+	//  void register_handler();
 	 bool encode_subscription_delete_request(unsigned char*, ssize_t* );
 
 	 bool decode_subscription_response(unsigned char*, size_t );
