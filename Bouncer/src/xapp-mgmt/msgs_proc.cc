@@ -73,7 +73,7 @@ bool XappMsgHandler::decode_subscription_response(unsigned char* data_buf, size_
 
 }
 
-/*bool  XappMsgHandler::a1_policy_handler(char * message, int *message_len, a1_policy_helper &helper){
+bool  XappMsgHandler::a1_policy_handler(char * message, int *message_len, a1_policy_helper &helper){
 
   rapidjson::Document doc;
   if (doc.Parse<kParseStopWhenDoneFlag>(message).HasParseError()){
@@ -132,7 +132,7 @@ bool XappMsgHandler::decode_subscription_response(unsigned char* data_buf, size_
     	return true;
     }
     return false;
-}*/
+}
 
 //For processing received messages.XappMsgHandler should mention if resend is required or not.
 void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
@@ -143,8 +143,7 @@ void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
 		mdclog_write(MDCLOG_ERR, "Error : %s, %d, RMR message larger than %d. Ignoring ...", __FILE__, __LINE__, MAX_RMR_RECV_SIZE);
 		return;
 	}
-	//a1_policy_helper helper;
-	// bool res=false;
+
 	E2AP_PDU_t* e2pdu = (E2AP_PDU_t*)calloc(1, sizeof(E2AP_PDU));
 	// int num = 0;
 
@@ -339,9 +338,13 @@ void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
 			break;
 		}
 
-		/*case A1_POLICY_REQ:
-
+		case A1_POLICY_REQ:
+		{
 			mdclog_write(MDCLOG_INFO, "In Message Handler: Received A1_POLICY_REQ.");
+
+			a1_policy_helper helper;
+			bool res=false;
+
 			helper.handler_id = xapp_id;
 
 			res = a1_policy_handler((char*)message->payload, &message->len, helper);
@@ -351,8 +354,9 @@ void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
 				message->sub_id = -1;
 				*resend = true;
 			}
-			break;*/
+			break;
 
+		}
 		default:
 			mdclog_write(MDCLOG_ERR, "Error :: Unknown message type %d received from RMR", message->mtype);
 			*resend = false;

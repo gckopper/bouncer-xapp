@@ -61,7 +61,7 @@ public:
 
 	 bool decode_subscription_response(unsigned char*, size_t );
 
-	 //bool a1_policy_handler(char *, int* , a1_policy_helper &);
+	 bool a1_policy_handler(char *, int* , a1_policy_helper &);
 
 	 void testfunction() {std::cout << "<<<<<<<<<<<<<<<<<<IN TEST FUNCTION<<<<<<<<<<<<<<<" << std::endl;}
 };
