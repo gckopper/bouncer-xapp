@@ -260,74 +260,77 @@ void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
 			uint8_t ctrl_header_buf[8192] = {0, };
 			ssize_t ctrl_header_buf_size = 8192;
 
-			UEID_t *ueid = ind_helper.get_ui_id();
+			// TODO ######## this is specific for E2SM-RC
+			// UEID_t *ueid = ind_helper.get_ui_id();
 
-			e2sm_control e2sm_control;
-			bool ret_head = e2sm_control.encode_rc_control_header(ctrl_header_buf, &ctrl_header_buf_size, ueid);
-			ASN_STRUCT_FREE(asn_DEF_UEID, ueid);	// we have to release here to avoid memory leaks if encoding returns false
-			if (!ret_head) {
-				mdclog_write(MDCLOG_ERR, "%s", e2sm_control.get_error().c_str());
-				*resend = false;
-				break;
-			}
+			// e2sm_control e2sm_control;
+			// bool ret_head = e2sm_control.encode_rc_control_header(ctrl_header_buf, &ctrl_header_buf_size, ueid);
+			// ASN_STRUCT_FREE(asn_DEF_UEID, ueid);	// we have to release here to avoid memory leaks if encoding returns false
+			// if (!ret_head) {
+			// 	mdclog_write(MDCLOG_ERR, "%s", e2sm_control.get_error().c_str());
+			// 	*resend = false;
+			// 	break;
+			// }
 
-			uint8_t ctrl_msg_buf[8192] = {0, };
-			ssize_t ctrl_msg_buf_size = 8192;
+			// uint8_t ctrl_msg_buf[8192] = {0, };
+			// ssize_t ctrl_msg_buf_size = 8192;
 
-			bool ret_msg = e2sm_control.encode_rc_control_message(ctrl_msg_buf, &ctrl_msg_buf_size);
-			if (!ret_msg) {
-				mdclog_write(MDCLOG_ERR, "%s", e2sm_control.get_error().c_str());
-				*resend = false;
-				break;
-			}
+			// bool ret_msg = e2sm_control.encode_rc_control_message(ctrl_msg_buf, &ctrl_msg_buf_size);
+			// if (!ret_msg) {
+			// 	mdclog_write(MDCLOG_ERR, "%s", e2sm_control.get_error().c_str());
+			// 	*resend = false;
+			// 	break;
+			// }
 
-			// E2AP Control Helper
-			ric_control_helper helper;
-			helper.requestor_id = ind_helper.request_id.ricRequestorID;
-			helper.instance_id = ind_helper.request_id.ricInstanceID;
-			helper.func_id = ind_helper.func_id;
-			// Control Call Process ID
-			helper.call_process_id = ind_helper.call_process_id.buf;
-			helper.call_process_id_size = ind_helper.call_process_id.size;
-			// Control ACK
-			helper.control_ack = RICcontrolAckRequest_noAck; // for now we do not require ACK messages for control requests
-			// Control Header
-			helper.control_header = ctrl_header_buf;
-			helper.control_header_size = ctrl_header_buf_size;
-			// Control Message
-			helper.control_msg = ctrl_msg_buf;
-			helper.control_msg_size = ctrl_msg_buf_size;
+			// // E2AP Control Helper
+			// ric_control_helper helper;
+			// helper.requestor_id = ind_helper.request_id.ricRequestorID;
+			// helper.instance_id = ind_helper.request_id.ricInstanceID;
+			// helper.func_id = ind_helper.func_id;
+			// // Control Call Process ID
+			// helper.call_process_id = ind_helper.call_process_id.buf;
+			// helper.call_process_id_size = ind_helper.call_process_id.size;
+			// // Control ACK
+			// helper.control_ack = RICcontrolAckRequest_noAck; // for now we do not require ACK messages for control requests
+			// // Control Header
+			// helper.control_header = ctrl_header_buf;
+			// helper.control_header_size = ctrl_header_buf_size;
+			// // Control Message
+			// helper.control_msg = ctrl_msg_buf;
+			// helper.control_msg_size = ctrl_msg_buf_size;
 
-			// E2AP buffer
-			uint8_t e2ap_buf[8192] = {0, };
-			ssize_t e2ap_buf_size = 8192;
+			// // E2AP buffer
+			// uint8_t e2ap_buf[8192] = {0, };
+			// ssize_t e2ap_buf_size = 8192;
 
-			ric_control_request control_req;
-			bool encoded = control_req.encode_e2ap_control_request(e2ap_buf, &e2ap_buf_size, helper);
-			if (encoded) {
-				message->mtype = RIC_CONTROL_REQ; // if we're here we are running and all is ok
-				message->sub_id = -1;
+			// ric_control_request control_req;
+			// bool encoded = control_req.encode_e2ap_control_request(e2ap_buf, &e2ap_buf_size, helper);
+			// if (encoded) {
+			// 	message->mtype = RIC_CONTROL_REQ; // if we're here we are running and all is ok
+			// 	message->sub_id = -1;
 
-				int rmr_len = rmr_payload_size(message);
-				if (rmr_len < 0) {
-					mdclog_write(MDCLOG_ERR, "unable to get the rmr payload size for control request. Reason = %s", strerror(errno));
-					*resend = false;
-					break;
-				}
+			// 	int rmr_len = rmr_payload_size(message);
+			// 	if (rmr_len < 0) {
+			// 		mdclog_write(MDCLOG_ERR, "unable to get the rmr payload size for control request. Reason = %s", strerror(errno));
+			// 		*resend = false;
+			// 		break;
+			// 	}
 
-				if (e2ap_buf_size <= (ssize_t)rmr_len) {	// avoid compiler comparison complains
-					memcpy(message->payload, e2ap_buf, e2ap_buf_size);
-					message->len = e2ap_buf_size;
-					*resend = true;
+			// 	if (e2ap_buf_size <= (ssize_t)rmr_len) {	// avoid compiler comparison complains
+			// 		memcpy(message->payload, e2ap_buf, e2ap_buf_size);
+			// 		message->len = e2ap_buf_size;
+			// 		*resend = true;
 
-				} else {
-					mdclog_write(MDCLOG_ERR, "E2AP Control Request encoded size %lu exceeds rmr payload size %d", e2ap_buf_size, rmr_len);
-					*resend = false;
-				}
-			} else {
-				mdclog_write(MDCLOG_ERR, "E2AP Control Request encoding error. Reason = %s", control_req.get_error().c_str());
-				*resend = false;
-			}
+			// 	} else {
+			// 		mdclog_write(MDCLOG_ERR, "E2AP Control Request encoded size %lu exceeds rmr payload size %d", e2ap_buf_size, rmr_len);
+			// 		*resend = false;
+			// 	}
+			// } else {
+			// 	mdclog_write(MDCLOG_ERR, "E2AP Control Request encoding error. Reason = %s", control_req.get_error().c_str());
+			// 	*resend = false;
+			// }
+			// TODO ######## end of specific for E2SM-RC
+
 
 			if (mdclog_level_get() > MDCLOG_INFO)
 				fprintf(stderr, "end of RIC_INDICATION case\n\n");
