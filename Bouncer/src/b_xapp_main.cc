@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
 	}
 	mdclog_write(MDCLOG_INFO, "Starting Listener Threads. Number of Workers = %d", num_threads);
 
-	std::unique_ptr<XappMsgHandler> mp_handler = std::make_unique<XappMsgHandler>(config[XappSettings::SettingName::XAPP_ID], sub_handler, b_xapp->schema_document);
+	std::unique_ptr<XappMsgHandler> mp_handler = std::make_unique<XappMsgHandler>(config[XappSettings::SettingName::XAPP_ID], sub_handler, b_xapp->schema_document, b_xapp->sockfd);
 
 	b_xapp->start_xapp_receiver(std::ref(*mp_handler), num_threads);
 

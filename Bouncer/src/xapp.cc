@@ -25,6 +25,14 @@
 #include <cpprest/uri.h>
 #include <cpprest/json.h>
 
+#include <fstream>
+#include <cstring>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include "../../ext/protobuf/rc.pb.h"
+#include <sstream>
+
 using namespace utility;
 using namespace web;
 using namespace web::http;
@@ -76,6 +84,8 @@ void Xapp::startup(SubscriptionHandler &sub_ref) {
 
 	startup_http_listener();	// throws std::exception
 
+	start_e2_socket_client(); // throws std::exception
+
 	//send subscriptions.
 	// startup_subscribe_requests(); // throws std::exception
 
@@ -116,6 +126,8 @@ void Xapp::shutdown(){
 	rmr_ref->set_listen(false);
 
 	shutdown_http_listener();
+
+	shutdown_e2_socket_client();
 
 	//Joining the threads
 	int threadcnt = xapp_rcv_thread.size();
@@ -386,7 +398,7 @@ void Xapp::startup_get_policies(void){
 	mdclog_write(MDCLOG_INFO, "%s:%d :: Starting up A1 policies\n", __FILE__, __LINE__);
 
 	// reading the schema file
-	const char *schema_file = "/etc/xapp/mwc-xapp-policy.json";	// FIXME this is hard coded according to the Dockerfile
+	const char *schema_file = "/etc/xapp/policy_schema.json";	// FIXME this is hard coded according to the Dockerfile
 	std::ifstream f(schema_file);
 	std::string schema_str;
 	if (!f) {
@@ -757,6 +769,54 @@ void Xapp::startup_http_listener() {
 		mdclog_write(MDCLOG_ERR, "startup http listener exception: %s", e.what());
 		throw;
 	}
+}
+
+void Xapp::start_e2_socket_client() {
+	mdclog_write(MDCLOG_INFO, "Starting client to E2 RAN");
+
+    // Create a socket and connect to the server
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd == -1) {
+        perror("Socket creation failed");
+        return;
+    }
+
+    struct sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(5000);
+    server_addr.sin_addr.s_addr = inet_addr("172.16.80.156");
+
+    if (connect(sockfd, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1) {
+        perror("Connection to server failed");
+        close(sockfd);
+        return;
+    }
+
+	mdclog_write(MDCLOG_INFO, "Connected over E2 to RAN");
+
+	oran::service_message message;
+	message.set_type(1);
+
+	for (long unsigned int i = 0; i < 1; i++) {
+		oran::rc_per_ue *rc = message.add_ue_max_prb_allocations();
+		//rc_helper = *(helper.ue_list[i].get());;
+		rc->set_ue_index(i);
+		rc->set_max_prb(10);
+	}
+
+	std::string serialized_message = message.SerializeAsString();
+
+	/* Connect using the existing connection */
+	if (send(sockfd, serialized_message.c_str(), serialized_message.size(), 0) == -1) {
+		mdclog_write(MDCLOG_ERR, "Error :: Could not send message");
+	}
+}
+
+void Xapp::shutdown_e2_socket_client() {
+	mdclog_write(MDCLOG_INFO, "Shutting down E2 RAN connection");
+
+	if (sockfd)
+		close(sockfd);
 }
 
 void Xapp::shutdown_http_listener() {

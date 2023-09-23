@@ -45,7 +45,7 @@ RUN apt-get update  \
     cpputest \
     libhiredis-dev \
     libcurl4-openssl-dev \
-    && apt-get clean
+    && apt-get clean && ldconfig
 
 WORKDIR ${STAGE_DIR}
 
@@ -75,14 +75,14 @@ RUN git clone https://gerrit.o-ran-sc.org/r/ric-plt/dbaas && \
     cd dbaas/redismodule && \
     ./autogen.sh && \
     ./configure && \
-    make -j 4 all && \
+    make -j`nproc` all && \
     make install
 
 RUN git clone https://gerrit.o-ran-sc.org/r/ric-plt/sdl && \
     cd sdl && \
     ./autogen.sh && \
     ./configure && \
-    make -j 4 all && \
+    make -j`nproc` all && \
     make install
 
 ## Install rapidjson
@@ -96,11 +96,30 @@ RUN git clone https://github.com/Tencent/rapidjson && \
     # cd ${STAGE_DIR} && \
     # rm -rf rapidjson
 
+ARG PROTO_VER=v1.58.1
+RUN git clone -b ${PROTO_VER} https://github.com/grpc/grpc && \
+    cd grpc && \
+    git submodule update --init && \
+    mkdir -p cmake/build && \
+    cd cmake/build && \
+    cmake ../.. -DgRPC_SSL_PROVIDER=openssl -DBUILD_SHARED_LIBS=ON -DCMAKE_CXX_STANDARD=14 && \
+    make -j`nproc` && \
+    make install && \
+    ldconfig
 
 ##-----------------------------------
 # Now install the program
 #------------------------------------
 COPY ./ ${STAGE_DIR}
+
+# RUN apt install -y locate
+# RUN apt-get update && apt install -y openssl libssl1.1
+
+# RUN cd src && \
+#     pkg-config --libs libssl && \
+#     pkg-config --libs libcrypto && \
+#     make clean && \
+#     make -j`nproc` VERBOSE=1 install
 
 RUN export CPATH=$CPATH:/usr/local/include && \
     cd src && \
@@ -110,7 +129,7 @@ RUN export CPATH=$CPATH:/usr/local/include && \
     make clean && \
     make -j 4 install
 
-COPY ${SCHEMA_PATH}/* init/routes.txt init/config-map.yaml schemas/mwc-xapp-policy.json /etc/xapp/
+COPY ${SCHEMA_PATH}/* init/routes.txt init/config-map.yaml init/policy_schema.json /etc/xapp/
 # COPY init/init_script.py /etc/xapp/init_script.py
 
 
@@ -130,6 +149,7 @@ RUN dpkg -i /tmp/*.deb && \
     rm -f /tmp/*.deb
 
 COPY --from=ricbuild /etc/xapp/* /etc/xapp/
+COPY --from=ricbuild /usr/local/lib /usr/local/lib
 COPY --from=ricbuild /usr/local/bin/b_xapp_main /usr/local/bin/b_xapp_main
 
 ##ENV  PYTHONHOME=/opt/python3 \

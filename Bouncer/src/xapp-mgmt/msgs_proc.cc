@@ -18,8 +18,13 @@
 
 #include <iostream>
 #include <fstream>
-#include <sstream>
 #include <string>
+#include <cstring>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include "../../ext/protobuf/rc.pb.h"
+#include <sstream>
 
 #include "msgs_proc.hpp"
 
@@ -347,6 +352,7 @@ void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
 			mdclog_write(MDCLOG_INFO, "In Message Handler: Received A1_POLICY_REQ.");
 
 			a1_policy_helper helper;
+			ue_rc_helper rc_helper;
 			bool res=false;
 
 			res = a1_policy_handler((char*)message->payload, &message->len, helper);
@@ -356,8 +362,26 @@ void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
 				message->sub_id = -1;
 				*resend = false;
 			}
-			break;
+			
+			if (sockfd) {
+				oran::service_message message;
+				message.set_type(1);
 
+				for (long unsigned int i = 0; i < helper.ue_list.size(); i++) {
+					oran::rc_per_ue *rc = message.add_ue_max_prb_allocations();
+					rc_helper = *(helper.ue_list[i].get());;
+					rc->set_ue_index(rc_helper.ue_index);
+					rc->set_max_prb(rc_helper.max_prb);
+				}
+
+				std::string serialized_message = message.SerializeAsString();
+
+				/* Connect using the existing connection */
+				if (send(sockfd, serialized_message.c_str(), sizeof(serialized_message.size()), 0) == -1) {
+					mdclog_write(MDCLOG_ERR, "Error :: Could not send message");
+				}
+			}
+			break;
 		}
 		default:
 			mdclog_write(MDCLOG_ERR, "Error :: Unknown message type %d received from RMR", message->mtype);
