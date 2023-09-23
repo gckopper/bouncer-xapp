@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package oran;
+
+message service_message {
+    int32 type = 1;
+    repeated rc_per_ue ue_max_prb_allocations = 2;
+    repeated kpm_per_ue ue_kpb_metrics = 3;
+}
+
+message rc_per_ue {
+    int32 ue_index = 1;
+    int32 max_prb = 2;
+}
+
+message kpm_per_ue {
+    int32 ue_index = 1;
+    double pkt_drop_rate = 2;
+    double pkt_volume = 3;
+}
