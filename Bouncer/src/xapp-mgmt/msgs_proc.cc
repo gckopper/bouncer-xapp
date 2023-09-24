@@ -81,14 +81,46 @@ bool XappMsgHandler::decode_subscription_response(unsigned char* data_buf, size_
 bool XappMsgHandler::a1_policy_handler(char * message, int *message_len, a1_policy_helper &helper){
 
   rapidjson::Document doc;
-  if (doc.Parse(message).HasParseError()){
+  if (doc.Parse<kParseStopWhenDoneFlag>(message).HasParseError()){
     mdclog_write(MDCLOG_ERR, "Error: %s, %d :: Could not decode A1 JSON message %s\n", __FILE__, __LINE__, message);
     return false;
   }
 
+  //Extract Operation
+  rapidjson::Pointer temp1("/operation");
+  rapidjson::Value * ref1 = temp1.Get(doc);
+  if (ref1 == NULL){
+    mdclog_write(MDCLOG_ERR, "Error : %s, %d:: Could not extract policy type id from %s\n", __FILE__, __LINE__, message);
+    return false;
+  }
+  helper.operation = ref1->GetString();
+
+  // Extract policy id type
+  rapidjson::Pointer temp2("/policy_type_id");
+  rapidjson::Value * ref2 = temp2.Get(doc);
+  if (ref2 == NULL){
+    mdclog_write(MDCLOG_ERR, "Error : %s, %d:: Could not extract policy type id from %s\n", __FILE__, __LINE__, message);
+    return false;
+  }
+  //helper.policy_type_id = ref2->GetString();
+  helper.policy_type_id = to_string(ref2->GetInt());
+
+  // Extract policy instance id
+  rapidjson::Pointer temp("/policy_instance_id");
+  rapidjson::Value * ref = temp.Get(doc);
+  if (ref == NULL){
+    mdclog_write(MDCLOG_ERR, "Error : %s, %d:: Could not extract policy type id from %s\n", __FILE__, __LINE__, message);
+    return false;
+  }
+  helper.policy_instance_id = ref->GetString();
+
+  // ########### Extract payload ###########
+  rapidjson::Pointer ptemp("/payload");
+  rapidjson::Value * pref = ptemp.Get(doc);
+
   // Validating json message based on the schema file
   rapidjson::SchemaValidator validator(*policy_schema.get());
-  if (!doc.Accept(validator)) {
+  if (!pref->Accept(validator)) {
 	  // Input JSON is invalid according to the schema
     // Output diagnostic information
     StringBuffer sb;
@@ -102,27 +134,15 @@ bool XappMsgHandler::a1_policy_handler(char * message, int *message_len, a1_poli
     return false;
   }
 
-  mdclog_write(MDCLOG_INFO, "%s, %d :: Decoding A1 JSON message: %s\n", __FILE__, __LINE__, message);
-
-  //Extract Operation
-  rapidjson::Pointer temp1("/policy_type_id");
-  rapidjson::Value * ref1 = temp1.Get(doc);
-  if (ref1 == NULL){
-    mdclog_write(MDCLOG_ERR, "Error : %s, %d:: Could not extract policy type id from %s\n", __FILE__, __LINE__, message);
-    return false;
-  }
-
-  helper.policy_type_id = ref1->GetInt();
-
-  // Extract policy id type
-  rapidjson::Pointer temp2("/ue_rc");
-  rapidjson::Value * ref2 = temp2.Get(doc);
-  if (ref2 == NULL){
+  // Extract list of ues
+  rapidjson::Pointer temp_ue("/payload/ue_rc");
+  rapidjson::Value * ue_rc = temp_ue.Get(doc);
+  if (ue_rc == NULL){
     mdclog_write(MDCLOG_ERR, "Error : %s, %d:: Could not extract ue_rc from %s\n", __FILE__, __LINE__, message);
     return false;
   }
 
-  for (auto& v : ref2->GetArray()) {
+  for (auto& v : ue_rc->GetArray()) {
     rapidjson::Pointer ue_index("/ue_index");
     rapidjson::Value *ue_value = ue_index.Get(v);
     rapidjson::Pointer max_prb("/max_prb");
@@ -134,8 +154,33 @@ bool XappMsgHandler::a1_policy_handler(char * message, int *message_len, a1_poli
 
     helper.ue_list.emplace_back(ue_helper);
   }
+  // ########### Extract payload up to here ###########
 
-  return true;
+  // Preparing response message to A1 Mediator
+  if (helper.policy_type_id == "20008" && helper.operation == "CREATE"){  // FIXME policy type id hardcoded here
+    helper.status = "OK";
+    Document::AllocatorType& alloc = doc.GetAllocator();
+
+    Value handler_id;
+    handler_id.SetString(helper.handler_id.c_str(), helper.handler_id.length(), alloc);
+
+    Value status;
+    status.SetString(helper.status.c_str(), helper.status.length(), alloc);
+
+    doc.AddMember("handler_id", handler_id, alloc);
+    doc.AddMember("status",status, alloc);
+    doc.RemoveMember("operation");
+    doc.RemoveMember("payload");
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    doc.Accept(writer);
+    strncpy(message,buffer.GetString(), buffer.GetLength());
+    *message_len = buffer.GetLength();
+
+    return true;
+  }
+
+  return false;
 }
 
 //For processing received messages.XappMsgHandler should mention if resend is required or not.
@@ -346,7 +391,9 @@ void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
 		{
 			mdclog_write(MDCLOG_INFO, "In Message Handler: Received A1_POLICY_REQ.");
 
-			a1_policy_helper helper;
+      a1_policy_helper helper;
+      helper.handler_id = xapp_id;
+
 			bool res=false;
 
 			res = a1_policy_handler((char*)message->payload, &message->len, helper);
@@ -354,7 +401,7 @@ void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
 			{
 				message->mtype = A1_POLICY_RESP;        // if we're here we are running and all is ok
 				message->sub_id = -1;
-				*resend = false;
+				*resend = true;
 			}
 			break;
 

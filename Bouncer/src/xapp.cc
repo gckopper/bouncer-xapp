@@ -413,6 +413,7 @@ void Xapp::startup_get_policies(void){
     unsigned char * message = (unsigned char *)calloc(policy_query.length(), sizeof(unsigned char));
     memcpy(message, policy_query.c_str(),  policy_query.length());
     xapp_rmr_header header;
+	header.state = RMR_OK;
     header.payload_length = policy_query.length();
     header.message_type = A1_POLICY_QUERY;
     mdclog_write(MDCLOG_INFO, "Sending request for policy id %d\n", policy_id);

@@ -121,7 +121,7 @@ FROM ubuntu:20.04
 ARG STAGE_DIR
 
 RUN apt-get update && \
-    apt-get install -y libcpprest2.10 libhiredis0.14 && \
+    apt-get install -y libcpprest2.10 libhiredis0.14 tcpdump iproute2 && \
     apt-get clean
 
 ## copy just the needed libraries install them into the final image
