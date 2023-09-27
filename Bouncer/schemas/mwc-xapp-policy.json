@@ -1,32 +1,46 @@
 {
-    "name": "tsapolicy",
-    "description": "tsa parameters",
-    "policy_type_id": 20008,
-    "create_schema": {
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "type": "object",
-        "properties": {
-            "ue_rc": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "ue_index": {
-                            "type": "integer"
-                        },
-                        "max_prb": {
-                            "type": "integer"
-                        }
-                    },
-                    "required": [
-                        "ue_index",
-                        "max_prb"
-                    ]
-                },
-                "minItems": 2,
-                "maxItems": 2
-            }
+    "type":"object",
+    "additionalProperties":false,
+    "required":["policy_type_id", "policy_instance_id", "operation"],
+    "properties":{
+        "policy_type_id":{
+            "type":"integer",
+            "enum":[20008]
         },
-        "additionalProperties": false
+        "policy_instance_id":{
+            "type":"string"
+        },
+        "operation":{
+            "type":"string",
+            "enum":["CREATE", "UPDATE", "DELETE"]
+        },
+        "payload":{
+            "$schema":"http://json-schema.org/draft-07/schema#",
+            "type":"object",
+            "additionalProperties":false,
+            "required":["ue_rc"],
+            "properties":{
+                "ue_rc": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "ue_index": {
+                                "type": "integer"
+                            },
+                            "max_prb": {
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "ue_index",
+                            "max_prb"
+                        ]
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                }
+            }
+        }
     }
 }

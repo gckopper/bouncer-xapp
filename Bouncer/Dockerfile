@@ -127,7 +127,7 @@ RUN export CPATH=$CPATH:/usr/local/include && \
     # . ./xapp_env.sh \
     # source ./xapp_env.sh \
     make clean && \
-    make -j 4 install
+    make -j`nproc` install
 
 COPY ${SCHEMA_PATH}/* init/routes.txt init/config-map.yaml init/policy_schema.json /etc/xapp/
 # COPY init/init_script.py /etc/xapp/init_script.py

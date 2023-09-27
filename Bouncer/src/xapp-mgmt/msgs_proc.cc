@@ -86,61 +86,135 @@ bool XappMsgHandler::decode_subscription_response(unsigned char* data_buf, size_
 bool XappMsgHandler::a1_policy_handler(char * message, int *message_len, a1_policy_helper &helper){
 
   rapidjson::Document doc;
-  if (doc.Parse(message).HasParseError()){
+  if (doc.Parse<kParseStopWhenDoneFlag>(message).HasParseError()){
     mdclog_write(MDCLOG_ERR, "Error: %s, %d :: Could not decode A1 JSON message %s\n", __FILE__, __LINE__, message);
     return false;
   }
 
-  // Validating json message based on the schema file
-  rapidjson::SchemaValidator validator(*policy_schema.get());
-  if (!doc.Accept(validator)) {
-	  // Input JSON is invalid according to the schema
-    // Output diagnostic information
-    StringBuffer sb;
-    validator.GetInvalidSchemaPointer().StringifyUriFragment(sb);
-    mdclog_write(MDCLOG_ERR, "Error: %s, %d :: Invalid schema: %s\n", __FILE__, __LINE__, sb.GetString());
-    mdclog_write(MDCLOG_ERR, "Error: %s, %d :: Invalid keyword: %s\n", __FILE__, __LINE__, validator.GetInvalidSchemaKeyword());
-    sb.Clear();
-    validator.GetInvalidDocumentPointer().StringifyUriFragment(sb);
-    mdclog_write(MDCLOG_ERR, "Error: %s, %d :: Invalid document: %s\n", __FILE__, __LINE__, sb.GetString());
-
-    return false;
-  }
-
-  mdclog_write(MDCLOG_INFO, "%s, %d :: Decoding A1 JSON message: %s\n", __FILE__, __LINE__, message);
-
   //Extract Operation
-  rapidjson::Pointer temp1("/policy_type_id");
+  rapidjson::Pointer temp1("/operation");
   rapidjson::Value * ref1 = temp1.Get(doc);
   if (ref1 == NULL){
-    mdclog_write(MDCLOG_ERR, "Error : %s, %d:: Could not extract policy type id from %s\n", __FILE__, __LINE__, message);
+    mdclog_write(MDCLOG_ERR, "Error : %s, %d :: Could not extract policy type id from %s\n", __FILE__, __LINE__, message);
     return false;
   }
-
-  helper.policy_type_id = ref1->GetInt();
+  helper.operation = ref1->GetString();
 
   // Extract policy id type
-  rapidjson::Pointer temp2("/ue_rc");
+  rapidjson::Pointer temp2("/policy_type_id");
   rapidjson::Value * ref2 = temp2.Get(doc);
   if (ref2 == NULL){
-    mdclog_write(MDCLOG_ERR, "Error : %s, %d:: Could not extract ue_rc from %s\n", __FILE__, __LINE__, message);
+    mdclog_write(MDCLOG_ERR, "Error : %s, %d :: Could not extract policy type id from %s\n", __FILE__, __LINE__, message);
     return false;
   }
+  helper.policy_type_id = ref2->GetString();
+  // helper.policy_type_id = to_string(ref2->GetInt());
 
-  for (auto& v : ref2->GetArray()) {
-    rapidjson::Pointer ue_index("/ue_index");
-    rapidjson::Value *ue_value = ue_index.Get(v);
-    rapidjson::Pointer max_prb("/max_prb");
-    rapidjson::Value *prb_value = max_prb.Get(v);
+  // Extract policy instance id
+  rapidjson::Pointer temp("/policy_instance_id");
+  rapidjson::Value * ref = temp.Get(doc);
+  if (ref == NULL){
+    mdclog_write(MDCLOG_ERR, "Error : %s, %d :: Could not extract policy type id from %s\n", __FILE__, __LINE__, message);
+    return false;
+  }
+  helper.policy_instance_id = ref->GetString();
 
-    shared_ptr<ue_rc_helper> ue_helper = make_shared<ue_rc_helper>();
-    ue_helper->ue_index = ue_value->GetInt();
-    ue_helper->max_prb = prb_value->GetInt();
 
-    helper.ue_list.emplace_back(ue_helper);
+  // Preparing response message to A1 Mediator
+  if (helper.policy_type_id == "20008"){
+
+    if (helper.operation == "CREATE") {
+      // ########### Extract payload ###########
+      rapidjson::Pointer ptemp("/payload");
+      rapidjson::Value * pref = ptemp.Get(doc);
+
+    //   // Validating json message based on the schema file
+    //   rapidjson::SchemaValidator validator(*policy_schema ); // TODO disabled as the a1mediator sends the payload as string rather than json object
+    //   if (!pref->Accept(validator)) {
+    // 	// Input JSON is invalid according to the schema
+    //     // Output diagnostic information
+    //     StringBuffer sb;
+    //     validator.GetInvalidSchemaPointer().StringifyUriFragment(sb);
+    //     mdclog_write(MDCLOG_ERR, "Error: %s, %d :: Invalid schema: %s\n", __FILE__, __LINE__, sb.GetString());
+    //     mdclog_write(MDCLOG_ERR, "Error: %s, %d :: Invalid keyword: %s\n", __FILE__, __LINE__, validator.GetInvalidSchemaKeyword());
+    //     sb.Clear();
+    //     validator.GetInvalidDocumentPointer().StringifyUriFragment(sb);
+    //     mdclog_write(MDCLOG_ERR, "Error: %s, %d :: Invalid document: %s\n", __FILE__, __LINE__, sb.GetString());
+
+    //     return false;
+    //   }
+
+      rapidjson::Document pdoc; // ue_id is delivered as string instead of json object, so we have to parse it
+      if (pdoc.Parse<kParseStopWhenDoneFlag>(pref->GetString()).HasParseError()){
+        mdclog_write(MDCLOG_ERR, "Error: %s, %d :: Could not decode \"payload\" in A1 JSON message %s\n", __FILE__, __LINE__, message);
+        return false;
+      }
+
+      // Extract list of ues
+      rapidjson::Pointer temp_ue("/ue_rc");
+      rapidjson::Value * ue_rc = temp_ue.Get(pdoc);
+      if (ue_rc == NULL){
+        mdclog_write(MDCLOG_ERR, "Error : %s, %d :: Could not extract ue_rc from %s\n", __FILE__, __LINE__, pref->GetString());
+        return false;
+      }
+
+      for (auto& v : ue_rc->GetArray()) {
+        rapidjson::Pointer ue_index("/ue_index");
+        rapidjson::Value *ue_value = ue_index.Get(v);
+        rapidjson::Pointer max_prb("/max_prb");
+        rapidjson::Value *prb_value = max_prb.Get(v);
+
+        shared_ptr<ue_rc_helper> ue_helper = make_shared<ue_rc_helper>();
+        ue_helper->ue_index = ue_value->GetInt();
+        ue_helper->max_prb = prb_value->GetInt();
+
+        helper.ue_list.emplace_back(ue_helper);
+      }
+      // ########### Extract payload up to here ###########
+
+      helper.status = "OK";
+
+    } else {
+      mdclog_write(MDCLOG_WARN, "WARN : %s, %d :: A1 operation \"%s\" not implemented\n", __FILE__, __LINE__, helper.operation.c_str());
+
+      return false;
+    }
+
+    Document::AllocatorType& alloc = doc.GetAllocator();
+
+    Value handler_id;
+    handler_id.SetString(helper.handler_id.c_str(), helper.handler_id.length(), alloc);
+
+    Value status;
+    status.SetString(helper.status.c_str(), helper.status.length(), alloc);
+
+    Value policy_id;
+    policy_id.SetInt(stoi(helper.policy_type_id));
+
+    doc.RemoveMember("policy_type_id");
+    doc.AddMember("policy_type_id", policy_id, alloc);
+
+    doc.AddMember("handler_id", handler_id, alloc);
+    doc.AddMember("status",status, alloc);
+    doc.RemoveMember("operation");
+    doc.RemoveMember("payload");
+    StringBuffer buffer;
+    Writer<StringBuffer> writer(buffer);
+    doc.Accept(writer);
+
+    int buflen = buffer.GetLength();
+    if (*message_len > buflen) {
+      strncpy(message, buffer.GetString(), buflen + 1);  // might result in buffer overflow so we test it
+      *message_len = buflen;
+
+      return true;
+
+    } else {
+      mdclog_write(MDCLOG_ERR, "Error : %s, %d:: The RMR payload buffer is smaller than the A1 response buffer.\n", __FILE__, __LINE__);
+    }
   }
 
-  return true;
+  return false;
 }
 
 //For processing received messages.XappMsgHandler should mention if resend is required or not.
@@ -353,6 +427,8 @@ void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
 
 			a1_policy_helper helper;
 			ue_rc_helper rc_helper;
+
+			helper.handler_id = xapp_id;
 			bool res=false;
 
 			res = a1_policy_handler((char*)message->payload, &message->len, helper);
@@ -360,27 +436,28 @@ void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
 			{
 				message->mtype = A1_POLICY_RESP;        // if we're here we are running and all is ok
 				message->sub_id = -1;
-				*resend = false;
-			}
-			
-			if (sockfd) {
-				oran::service_message message;
-				message.set_type(1);
+				*resend = true;
 
-				for (long unsigned int i = 0; i < helper.ue_list.size(); i++) {
-					oran::rc_per_ue *rc = message.add_ue_max_prb_allocations();
-					rc_helper = *(helper.ue_list[i].get());;
-					rc->set_ue_index(rc_helper.ue_index);
-					rc->set_max_prb(rc_helper.max_prb);
+				if (sockfd) {
+					oran::service_message message;
+					message.set_type(1);
+
+					for (long unsigned int i = 0; i < helper.ue_list.size(); i++) {
+						oran::rc_per_ue *rc = message.add_ue_max_prb_allocations();
+						rc_helper = *(helper.ue_list[i].get());;
+						rc->set_ue_index(rc_helper.ue_index);
+						rc->set_max_prb(rc_helper.max_prb);
+					}
+
+					std::string serialized_message = message.SerializeAsString();
+
+					/* Connect using the existing connection */
+					if (send(sockfd, serialized_message.c_str(), sizeof(serialized_message.size()), 0) == -1) {
+						mdclog_write(MDCLOG_ERR, "Error :: Could not send message");
+					}
 				}
-
-				std::string serialized_message = message.SerializeAsString();
-
-				/* Connect using the existing connection */
-				if (send(sockfd, serialized_message.c_str(), sizeof(serialized_message.size()), 0) == -1) {
-					mdclog_write(MDCLOG_ERR, "Error :: Could not send message");
-				}
 			}
+
 			break;
 		}
 		default:

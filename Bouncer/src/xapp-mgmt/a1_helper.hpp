@@ -43,21 +43,14 @@ struct ue_rc_helper {
 };
 
 struct a1_policy_helper{
-    int policy_type_id;
-    std::vector<std::shared_ptr<ue_rc_helper>> ue_list;
-};
-
-/* original bouncer xapp
-struct a1_policy_helper{
 
 	std::string operation;
 	std::string policy_type_id;
 	std::string policy_instance_id;
 	std::string handler_id;
 	std::string status;
-
+    std::vector<std::shared_ptr<ue_rc_helper>> ue_list;
 };
-*/
 
 
 #endif /* SRC_XAPP_FORMATS_A1MSG_A1_POLICY_HELPER_HPP_ */

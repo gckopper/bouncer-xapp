@@ -23,7 +23,8 @@ RNIB_LIBS:= -pthread /usr/local/include/rnib/rnibreader.a
 PROTO_LIBS:= `pkg-config --libs protobuf`
 SSL_LIBS:= `pkg-config --libs openssl`
 #CRYPTO_LIBS:= `pkg-config --libs libcrypto`
-@echo "SSL Libs: $(SSL_LIBS)"
+# print the folling SSL Libs using make target print-SSL_LIBS (e.g. make print-SSL_LIBS)
+# @echo "SSL Libs: $(SSL_LIBS)"
 ######## Keep include dirs separate so we have transparency
 
 
@@ -46,7 +47,7 @@ PROTOBUFFLAGS = -I$(PROTOBUFSRC)
 
 ########libs
 
-LIBS= -lsdl -lrmr_si -lpthread -lm -lboost_system -lcpprest $(LOG_LIBS) $(CURL_LIBS) $(RNIB_LIBS) $(PROTO_LIBS) $(SSL_LIBS) #$(CRYPTO_LIBS) 
+LIBS= -lsdl -lrmr_si -lpthread -lm -lboost_system -lcpprest $(LOG_LIBS) $(CURL_LIBS) $(RNIB_LIBS) $(PROTO_LIBS) $(SSL_LIBS) #$(CRYPTO_LIBS)
 COV_FLAGS= -fprofile-arcs -ftest-coverage
 
 #######

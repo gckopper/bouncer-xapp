@@ -5,7 +5,7 @@
             {
                 "name": "bouncer-xapp",
                 "image": {
-                    "registry": "example.com:80",
+                    "registry": "127.0.0.1:32000",
                     "name": "bouncer",
                     "tag": "latest"
                	}
@@ -41,8 +41,8 @@
             "protPort": "tcp:4560",
             "maxSize": 2072,
             "numWorkers": 1,
-            "txMessages": ["RIC_SUB_REQ","RIC_SUB_DEL_REQ"],
             "rxMessages": ["RIC_SUB_RESP", "RIC_INDICATION","RIC_SUB_DEL_RESP","A1_POLICY_REQ"],
+            "txMessages": ["RIC_SUB_REQ","RIC_SUB_DEL_REQ"],
             "policies": [20008]
         },
         "http":{

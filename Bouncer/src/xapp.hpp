@@ -81,8 +81,11 @@ public:
 
   void fetch_connected_nodeb_list();
 
-  shared_ptr<SchemaDocument> schema_document;
+  void start_e2_socket_client();
+
   int sockfd;
+  SchemaDocument *schema_document;
+
 private:
   void startup_subscribe_kpm_requests(void);
   void startup_subscribe_requests();
@@ -96,7 +99,6 @@ private:
   jsonn build_kpm_subscription_request(string);
   void startup_http_listener();
   void shutdown_http_listener();
-  void start_e2_socket_client();
   void shutdown_e2_socket_client();
   void handle_request(http_request request);
   void handle_error(pplx::task<void>& t, const utility::string_t msg);

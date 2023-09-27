@@ -178,7 +178,7 @@ void XappRmr::xapp_rmr_receive(MsgHandler&& msgproc, XappRmr *parent){
 			//start of code to check decoding indication payload
 
 			num++;
-			mdclog_write(MDCLOG_DEBUG, "Total Indications received : %d", num);
+			mdclog_write(MDCLOG_DEBUG, "Total Messages received : %d", num);
 
 			if(*resend){
 				mdclog_write(MDCLOG_INFO,"RMR Return to Sender Message of Type: %d",mbuf->mtype);

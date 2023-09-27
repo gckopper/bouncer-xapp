@@ -56,6 +56,7 @@ Xapp::~Xapp(void){
 		xapp_mutex->~mutex();
 		delete xapp_mutex;
 	}
+	delete schema_document;
 }
 
 //Stop the xapp. Note- To be run only from unit test scripts.
@@ -83,8 +84,6 @@ void Xapp::startup(SubscriptionHandler &sub_ref) {
 	startup_registration_request(); // throws std::exception
 
 	startup_http_listener();	// throws std::exception
-
-	start_e2_socket_client(); // throws std::exception
 
 	//send subscriptions.
 	// startup_subscribe_requests(); // throws std::exception
@@ -398,7 +397,7 @@ void Xapp::startup_get_policies(void){
 	mdclog_write(MDCLOG_INFO, "%s:%d :: Starting up A1 policies\n", __FILE__, __LINE__);
 
 	// reading the schema file
-	const char *schema_file = "/etc/xapp/policy_schema.json";	// FIXME this is hard coded according to the Dockerfile
+	const char *schema_file = "/etc/xapp/mwc-xapp-policy.json";	// this is hard coded according to the Dockerfile
 	std::ifstream f(schema_file);
 	std::string schema_str;
 	if (!f) {
@@ -415,21 +414,24 @@ void Xapp::startup_get_policies(void){
 		throw std::runtime_error("The schema is not a valid JSON");
 	}
 
-	// SchemaDocument schema(sd);
-	schema_document = make_shared<SchemaDocument>(sd);
+	SchemaDocument schema(sd);
+	// SchemaDocument schema_document(sd);
+	schema_document = std::move(&schema);
 
-    // int policy_id = BOUNCER_POLICY_ID;
-	int policy_id = 20008;	// FIXME hard coded, shoudld come from xapp descriptor file
 
-    std::string policy_query = "{\"policy_type_id\":" + std::to_string(policy_id) + "}";
-    unsigned char * message = (unsigned char *)calloc(policy_query.length(), sizeof(unsigned char));
-    memcpy(message, policy_query.c_str(),  policy_query.length());
-    xapp_rmr_header header;
-    header.payload_length = policy_query.length();
-    header.message_type = A1_POLICY_QUERY;
-    mdclog_write(MDCLOG_INFO, "Sending request for policy id %d\n", policy_id);
-    rmr_ref->xapp_rmr_send(&header, (void *)message);
-    free(message);
+    // // int policy_id = BOUNCER_POLICY_ID;
+	// int policy_id = 20008;
+
+    // std::string policy_query = "{\"policy_type_id\":" + std::to_string(policy_id) + "}";
+    // unsigned char * message = (unsigned char *)calloc(policy_query.length(), sizeof(unsigned char));
+    // memcpy(message, policy_query.c_str(),  policy_query.length());
+    // xapp_rmr_header header;
+	// header.state = RMR_OK;
+    // header.payload_length = policy_query.length();
+    // header.message_type = A1_POLICY_QUERY;
+    // mdclog_write(MDCLOG_INFO, "Sending request for policy id %d\n", policy_id);
+    // rmr_ref->xapp_rmr_send(&header, (void *)message);
+    // free(message);
 
 }
 
