@@ -5,7 +5,7 @@
             {
                 "name": "bouncer-xapp",
                 "image": {
-                    "registry": "example.com:80",
+                    "registry": "127.0.0.1:32000",
                     "name": "bouncer",
                     "tag": "latest"
                	}
@@ -25,7 +25,7 @@
                     "port": 4560,
 
                     "rxMessages": ["RIC_SUB_RESP", "RIC_INDICATION","RIC_SUB_DEL_RESP","RIC","A1_POLICY_REQ"],
-                    "txMessages": ["RIC_SUB_REQ","RIC_SUB_DEL_REQ","A1_POLICY_QUERY"],
+                    "txMessages": ["RIC_SUB_REQ","RIC_SUB_DEL_REQ"],
                     "policies": [20008],
                     "description": "rmr receive data port for Bouncer xApp"
                 },
@@ -42,7 +42,7 @@
             "maxSize": 2072,
             "numWorkers": 1,
             "rxMessages": ["RIC_SUB_RESP", "RIC_INDICATION","RIC_SUB_DEL_RESP","A1_POLICY_REQ"],
-            "txMessages": ["RIC_SUB_REQ","RIC_SUB_DEL_REQ","A1_POLICY_QUERY"],
+            "txMessages": ["RIC_SUB_REQ","RIC_SUB_DEL_REQ"],
             "policies": [20008]
         },
         "http":{

@@ -72,6 +72,17 @@ int main(int argc, char *argv[]) {
 	// Register async signal handler to stop on startup errors received by REST calls
 	signal(SIGTERM, signalHandler);
 
+	//start listener threads and register message handlers.
+	int num_threads = std::stoi(config[XappSettings::SettingName::THREADS]);
+	if (num_threads > 1) {
+		mdclog_write(MDCLOG_WARN, "Using default number of threads = 1. Multithreading on xapp receiver is not supported yet.");
+	}
+	mdclog_write(MDCLOG_INFO, "Starting Listener Threads. Number of Workers = %d", num_threads);
+
+	std::unique_ptr<XappMsgHandler> mp_handler = std::make_unique<XappMsgHandler>(config[XappSettings::SettingName::XAPP_ID], sub_handler, b_xapp->schema_document);
+
+	b_xapp->start_xapp_receiver(std::ref(*mp_handler), num_threads);
+
 	//Startup E2 subscription
 	try {
 		b_xapp->startup(sub_handler);
@@ -88,16 +99,6 @@ int main(int argc, char *argv[]) {
 	sleep(2);
 
 
-	//start listener threads and register message handlers.
-	int num_threads = std::stoi(config[XappSettings::SettingName::THREADS]);
-	if (num_threads > 1) {
-		mdclog_write(MDCLOG_WARN, "Using default number of threads = 1. Multithreading on xapp receiver is not supported yet.");
-	}
-	mdclog_write(MDCLOG_INFO, "Starting Listener Threads. Number of Workers = %d", num_threads);
-
-	std::unique_ptr<XappMsgHandler> mp_handler = std::make_unique<XappMsgHandler>(config[XappSettings::SettingName::XAPP_ID], sub_handler, b_xapp->schema_document);
-
-	b_xapp->start_xapp_receiver(std::ref(*mp_handler), num_threads);
 
 	if (!sig_raised) {
 		signal(SIGTERM, NULL);	// unregister async signal handler
