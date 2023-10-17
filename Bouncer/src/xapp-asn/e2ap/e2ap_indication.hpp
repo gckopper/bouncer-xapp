@@ -48,6 +48,7 @@ public:
   ~ric_indication(void);
 
   bool encode_e2ap_indication(unsigned char *, ssize_t *,  ric_indication_helper &);
+  bool decode_e2ap_indication(unsigned char *, ssize_t,  ric_indication_helper &);
   InitiatingMessage_t * get_message (void) ;
   bool set_fields(InitiatingMessage_t *, ric_indication_helper &);
   bool get_fields(InitiatingMessage_t *, ric_indication_helper &);

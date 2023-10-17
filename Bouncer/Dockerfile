@@ -75,14 +75,14 @@ RUN git clone https://gerrit.o-ran-sc.org/r/ric-plt/dbaas && \
     cd dbaas/redismodule && \
     ./autogen.sh && \
     ./configure && \
-    make -j 4 all && \
+    make -j `nproc` all && \
     make install
 
 RUN git clone https://gerrit.o-ran-sc.org/r/ric-plt/sdl && \
     cd sdl && \
     ./autogen.sh && \
     ./configure && \
-    make -j 4 all && \
+    make -j `nproc` all && \
     make install
 
 ## Install rapidjson
@@ -108,7 +108,7 @@ RUN export CPATH=$CPATH:/usr/local/include && \
     # . ./xapp_env.sh \
     # source ./xapp_env.sh \
     make clean && \
-    make -j 4 install
+    make -j `nproc` install
 
 COPY ${SCHEMA_PATH}/* init/routes.txt init/config-map.yaml schemas/mwc-xapp-policy.json /etc/xapp/
 # COPY init/init_script.py /etc/xapp/init_script.py

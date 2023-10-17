@@ -59,7 +59,6 @@
 #include "subscription_helper.hpp"
 #include "subscription_request.hpp"
 #include "subscription_response.hpp"
-#include "e2sm_subscription.hpp"
 #include "subs_mgmt.hpp"
 
 typedef struct{

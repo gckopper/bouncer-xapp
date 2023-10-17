@@ -33,6 +33,11 @@
 #include <B-Header.h>
 #include <B-Message.h>
 
+#include "RICindicationHeader.h"
+#include "RICindicationMessage.h"
+#include "E2SM-KPM-IndicationHeader.h"
+  #include "E2SM-KPM-IndicationMessage.h"
+
 class e2sm_indication {
 public:
 	e2sm_indication(void);
@@ -44,8 +49,11 @@ public:
   bool get_fields(E2SM_Bouncer_IndicationHeader_t *, e2sm_indication_helper &);
   bool get_fields(E2SM_Bouncer_IndicationMessage_t *, e2sm_indication_helper &);
 
-  bool encode_indication_header(unsigned char *, ssize_t *, e2sm_indication_helper &);
-  bool encode_indication_message(unsigned char*, ssize_t *, e2sm_indication_helper &);
+  bool encode_bouncer_indication_header(unsigned char *, ssize_t *, e2sm_indication_helper &);
+  bool encode_bouncer_indication_message(unsigned char*, ssize_t *, e2sm_indication_helper &);
+
+  bool decode_kpm_indication_header_format1(RICindicationHeader_t *, e2sm_kpm_indication_fmt1_helper &);
+  bool decode_kpm_indication_msg_format1(RICindicationMessage_t *, e2sm_kpm_indication_fmt1_helper &);
 
 
   std::string  get_error (void) const {return error_string ;};
@@ -54,9 +62,9 @@ private:
 
   E2SM_Bouncer_IndicationHeader_t * indication_head; // used for encoding
   E2SM_Bouncer_IndicationMessage_t* indication_msg;
-  E2SM_Bouncer_IndicationHeader_Format1_t head_fmt1;
-  E2SM_Bouncer_IndicationMessage_Format1_t msg_fmt1;
 
+  E2SM_KPM_IndicationHeader_t *kpm_header;
+  E2SM_KPM_IndicationMessage_t *kpm_msg;
 
   size_t errbuf_len;
   char errbuf[128];

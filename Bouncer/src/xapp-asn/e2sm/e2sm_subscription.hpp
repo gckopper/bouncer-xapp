@@ -27,12 +27,21 @@
 #include <mdclog/mdclog.h>
 #include <vector>
 
-#include <E2SM-Bouncer-EventTriggerDefinition.h>
-#include <E2SM-Bouncer-ActionDefinition.h>
-#include <E2SM-Bouncer-EventTriggerDefinition-Format1.h>
-#include <E2SM-Bouncer-ActionDefinition-Format1.h>
-#include <B-TriggerNature.h>
-#include <RANparameter-Item.h>
+// #include <E2SM-Bouncer-EventTriggerDefinition.h>
+// #include <E2SM-Bouncer-ActionDefinition.h>
+// #include <E2SM-Bouncer-EventTriggerDefinition-Format1.h>
+// #include <E2SM-Bouncer-ActionDefinition-Format1.h>
+// #include <B-TriggerNature.h>
+// #include <RANparameter-Item.h>
+
+#include <E2SM-KPM-EventTriggerDefinition.h>
+#include <E2SM-KPM-EventTriggerDefinition-Format1.h>
+#include <E2SM-KPM-ActionDefinition.h>
+#include <E2SM-KPM-ActionDefinition-Format1.h>
+#include <MeasurementInfoItem.h>
+#include <LabelInfoItem.h>
+
+#include "e2sm_helpers.hpp"
 
 /* builder class for E2SM event trigger definition */
 
@@ -41,23 +50,18 @@ public:
 	e2sm_subscription(void);
   ~e2sm_subscription(void);
 
-  bool set_fields(E2SM_Bouncer_EventTriggerDefinition_t *, e2sm_subscription_helper &);
-  bool set_fields(E2SM_Bouncer_ActionDefinition_t *, e2sm_subscription_helper &);
+  bool encodeKPMTriggerDefinition(unsigned char *buffer, ssize_t *buflen, e2sm_kpm_subscription_helper& helper);
+  bool encodeKPMActionDefinition(unsigned char *buffer, ssize_t *buflen, e2sm_kpm_subscription_helper& helper);
 
-  bool encode_event_trigger(unsigned char *, ssize_t *, e2sm_subscription_helper &);
-  bool encode_action_defn(unsigned char*, ssize_t *, e2sm_subscription_helper &);
-
-
-  std::string  get_error (void) const {return error_string ;};
+  std::string get_error (void) const {return error_string ;};
 
 private:
 
-  E2SM_Bouncer_EventTriggerDefinition_t * event_trigger; // used for encoding
-  E2SM_Bouncer_ActionDefinition_t* action_defn;
-  E2SM_Bouncer_EventTriggerDefinition_Format1_t event_fmt1;
-  E2SM_Bouncer_ActionDefinition_Format1_t actn_fmt1;
-  RANparameter_Item_t *ran_param;
+  bool set_fields(E2SM_KPM_EventTriggerDefinition_t *trigger_def, e2sm_kpm_subscription_helper& helper);
+  bool set_fields(E2SM_KPM_ActionDefinition_t *action_def, e2sm_kpm_subscription_helper& helper);
 
+  E2SM_KPM_EventTriggerDefinition_t *kpm_trigger_def;
+  E2SM_KPM_ActionDefinition_t *kpm_action_def;
 
   size_t errbuf_len;
   char errbuf[128];

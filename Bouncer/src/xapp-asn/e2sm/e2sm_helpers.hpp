@@ -21,100 +21,51 @@
 #ifndef E2SM_HELPER_
 #define E2SM_HELPER_
 
-#include <errno.h>
-#include <iostream>
-#include <vector>
-#include <sstream>
-#include <memory>
+#include <unordered_map>
 
 extern "C" {
 	#include "E2SM-RC-IndicationHeader.h"
-	#include "E2SM-RC-IndicationHeader-Format2.h"
-	#include "E2SM-RC-IndicationMessage.h"
-	#include "E2SM-RC-CallProcessID.h"
+	#include "E2SM-RC-ControlHeader.h"
+	#include "E2SM-RC-ControlMessage.h"
 	#include "RICindicationHeader.h"
+	#include "UEID.h"
 }
 
-typedef struct ranparam_helper ranparam_helper;
-struct ranparam_helper {
-	  long int _param_id;
-	  unsigned char* _param_name;
-	  size_t _param_name_len;
-	  int _param_test;
-	  unsigned char* _param_value;
-	  size_t _param_value_len;
+typedef struct e2sm_kpm_subscription_helper {
+	struct {
+		unsigned long reportingPeriod;
+	} trigger;
+	struct {
+		unsigned long granulPeriod;
+	} action;
+} e2sm_kpm_subscription_helper;
 
-};
-class RANParam_Helper{
-private:
-	ranparam_helper _ranparam_helper;
+typedef struct e2sm_kpm_indication_fmt1_helper {
+	struct {
+		uint64_t timestamp;
+	} header;
+	struct {
+		std::unordered_map<std::string, long> measurements; // measName, measRecord
+	} msg;
+} e2sm_kpm_indication_fmt1_helper;
 
-public:
-
-	RANParam_Helper(int id, unsigned char *param_name, size_t param_name_len, int param_test, unsigned char* param_value, size_t param_value_len){
-		_ranparam_helper._param_id = id;
-		_ranparam_helper._param_name = param_name;
-		_ranparam_helper._param_name_len = param_name_len;
-		_ranparam_helper._param_test = param_test;
-		_ranparam_helper._param_value = param_value;
-		_ranparam_helper._param_value_len = param_value_len;
-	  }
-
-	const ranparam_helper & getran_helper() const {
-		return _ranparam_helper;
-	}
-	void print_ranparam_info(void){
-	    std::cout <<"Param ID = " << _ranparam_helper._param_id << std::endl;
-	    std::cout << "Parame Name =" << _ranparam_helper._param_name << std::endl;
-	    std::cout <<"Param Test = " << _ranparam_helper._param_test << std::endl;
-	    std::cout <<"Param Value = " << _ranparam_helper._param_value << std::endl;
-	}
-};
-
-
-using ranparam_helper_t = std::vector<RANParam_Helper>;
-
-typedef struct e2sm_subscription_helper e2sm_subscription_helper;
-struct e2sm_subscription_helper {
-public:
-
-
-  int triger_nature;
-  ranparam_helper_t param;
-  void add_param(int id, unsigned char *param_name, size_t param_name_len, int param_test, unsigned char* param_value, size_t param_value_len){
-	  RANParam_Helper rparam(id,param_name,param_name_len,param_test,param_value,param_value_len);
-      param.push_back(rparam);
-    };
-  ranparam_helper_t get_paramlist() const {return param;};
-
-
-
-};
-
-
-typedef struct e2sm_indication_helper e2sm_indication_helper;
-
-
-struct e2sm_indication_helper {
+typedef struct e2sm_indication_helper {
 	long int header;
 	unsigned char* message;
 	size_t message_len;
-};
+} e2sm_indication_helper;
 
-typedef struct e2sm_control_helper e2sm_control_helper;
-
-struct e2sm_control_helper {
+ typedef struct e2sm_control_helper {
 	long int header;
 	unsigned char* message;
 	size_t message_len;
-};
+} e2sm_control_helper;
 
-// typedef struct e2sm_rc_control_helper e2sm_rc_control_helper;
-// struct e2sm_rc_control_helper {
-// 	E2SM_RC_ControlHeader_t *header;
-// 	E2SM_RC_ControlMessage_t *message;
-// 	UEID_t *ueid;
-// };
+typedef struct e2sm_rc_control_helper {
+	E2SM_RC_ControlHeader_t *header;
+	E2SM_RC_ControlMessage_t *message;
+	UEID_t *ueid;
+} e2sm_rc_control_helper;
 
 class RCIndicationlHelper {
 	public:
@@ -124,7 +75,7 @@ class RCIndicationlHelper {
 		asn_transfer_syntax syntax = ATS_ALIGNED_BASIC_PER;
 		asn_dec_rval_t rval = asn_decode(NULL, syntax, &asn_DEF_E2SM_RC_IndicationHeader, (void **)&header, e2ap_header->buf, e2ap_header->size);
 		if (rval.code != RC_OK) {
-			fprintf(stderr, "ERROR %s:%d unable to decode UEID from indication header\n", __FILE__, __LINE__);
+			fprintf(stderr, "ERROR %s:%d unable to decode RC_IndicationHeader\n", __FILE__, __LINE__);
 			return nullptr;
 		}
 		return header;

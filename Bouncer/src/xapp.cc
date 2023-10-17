@@ -25,6 +25,8 @@
 #include <cpprest/uri.h>
 #include <cpprest/json.h>
 
+#include "e2sm_subscription.hpp"
+
 using namespace utility;
 using namespace web;
 using namespace web::http;
@@ -48,7 +50,7 @@ Xapp::~Xapp(void){
 		xapp_mutex->~mutex();
 		delete xapp_mutex;
 	}
-	delete schema_document;
+	// delete schema_document;
 }
 
 //Stop the xapp. Note- To be run only from unit test scripts.
@@ -71,14 +73,14 @@ void Xapp::startup(SubscriptionHandler &sub_ref) {
 
 	subhandler_ref = &sub_ref;
 	// set_rnib_gnblist();
-	// fetch_connected_nodeb_list();
+	fetch_connected_nodeb_list();
 
 	startup_registration_request(); // throws std::exception
 
 	startup_http_listener();	// throws std::exception
 
 	//send subscriptions.
-	// startup_subscribe_requests(); // throws std::exception
+	startup_subscribe_requests(); // throws std::exception
 
 	//read A1 policies
 	startup_get_policies();
@@ -283,6 +285,31 @@ jsonn Xapp::build_kpm_subscription_request(string meid) {
 	port = config_ref->operator[](XappSettings::SettingName::BOUNCER_PORT);
 	int rmr_port = stoi(port);
 
+	e2sm_kpm_subscription_helper helper;
+	helper.trigger.reportingPeriod = 5;	// TODO (should be each 500ms) could be changed via ENV (seems that srsRAN hardcoded it to 1)
+	helper.action.granulPeriod = 3;  // TODO could be changed via ENV (seems that srsRAN hardcoded it to 1)
+
+	e2sm_subscription kpm_sub;
+
+	unsigned char buf[4096];
+	ssize_t buflen = 4096;
+
+	// RICeventTriggerDefinition
+	if (!kpm_sub.encodeKPMTriggerDefinition(buf, &buflen, helper)) {
+		mdclog_write(MDCLOG_ERR, "Unable to enconde E2SM_KPM_EventTriggerDefinition to create subscription request. Reason: %s", kpm_sub.get_error().c_str());
+	}
+
+	// converting to array of int as required by the json schema
+	std::vector<int> kpm_trigger(buf, buf + buflen);
+
+	buflen = 4096;
+	if (!kpm_sub.encodeKPMActionDefinition(buf, &buflen, helper)) {
+		mdclog_write(MDCLOG_ERR, "Unable to enconde E2SM_KPM_ActionDefinition to create subscription request. Reason: %s", kpm_sub.get_error().c_str());
+	}
+
+	// converting to array of int as required by the json schema
+	std::vector<int> kpm_action(buf, buf + buflen);
+
 	jsonn jsonObject =
 		{
 			{"SubscriptionId",""},
@@ -293,13 +320,13 @@ jsonn Xapp::build_kpm_subscription_request(string meid) {
 				{
 					{
 						{"XappEventInstanceId",12345},
-						{"EventTriggers",{1}},
+						{"EventTriggers",kpm_trigger},
 						{"ActionToBeSetupList",
 							{
 								{
 									{"ActionID",1},
 									{"ActionType","report"},
-									{"ActionDefinition",{1}},
+									{"ActionDefinition",kpm_action},
 									{"SubsequentAction",{
 										{"SubsequentActionType","continue"},
 										{"TimeToWait","zero"}}
@@ -324,7 +351,7 @@ void Xapp::startup_subscribe_requests(){
 	size_t len = e2node_map.size();
 	mdclog_write(MDCLOG_INFO, "E2 Node List size : %lu", len);
 	if (len == 0) {
-		throw std::runtime_error("Subscriptions cannot be sent as there is no E2 NodeB connected to the RIC");
+		throw std::runtime_error("Subscriptions cannot be sent as there is no E2 Node connected to the RIC");
 	}
 
 	string nodebid = config_ref->operator[](XappSettings::SettingName::NODEB_ID);
@@ -379,7 +406,7 @@ void Xapp::startup_subscribe_requests(){
 	}
 
 	if (subscription_map.size() == 0) {
-		throw std::runtime_error("Unable to subscribe to E2 NodeB");
+		throw std::runtime_error("Unable to subscribe to E2 Node");
 	}
 }
 
@@ -404,9 +431,9 @@ void Xapp::startup_get_policies(void){
 		throw std::runtime_error("The schema is not a valid JSON");
 	}
 
-	SchemaDocument schema(sd);
-	// SchemaDocument schema_document(sd);
-	schema_document = std::move(&schema);
+	// SchemaDocument schema(sd);
+	// // SchemaDocument schema_document(sd);
+	// schema_document = std::move(&schema);
 
 
     // // int policy_id = BOUNCER_POLICY_ID;

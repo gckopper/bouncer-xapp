@@ -20,48 +20,52 @@
 /* Classes to handle E2 service model based on e2sm-Bouncer-v001.asn */
 #include "e2sm_indication.hpp"
 
- //initialize
- e2sm_indication::e2sm_indication(void){
+extern "C" {
+  #include "E2SM-KPM-IndicationHeader-Format1.h"
+  #include "E2SM-KPM-IndicationMessage-Format1.h"
+  #include "MeasurementInfoList.h"
+  #include "MeasurementInfoItem.h"
+  #include "MeasurementDataItem.h"
+  #include "MeasurementRecordItem.h"
+}
 
-	memset(&head_fmt1, 0, sizeof(E2SM_Bouncer_IndicationHeader_Format1_t));
+//initialize
+e2sm_indication::e2sm_indication(void){
 
-	memset(&msg_fmt1, 0, sizeof(E2SM_Bouncer_IndicationMessage_Format1_t));
+  indication_head = NULL;
+  indication_msg = NULL;
 
+  kpm_header = NULL;
+  kpm_msg = NULL;
 
-
-    indication_head = 0;
-    indication_head = ( E2SM_Bouncer_IndicationHeader_t *)calloc(1, sizeof( E2SM_Bouncer_IndicationHeader_t));
-    assert(indication_head != 0);
-
-    indication_msg = 0;
-    indication_msg = (E2SM_Bouncer_IndicationMessage_t*)calloc(1, sizeof(E2SM_Bouncer_IndicationMessage_t));
-    assert(indication_msg !=0);
-
-    errbuf_len = 128;
-  };
-
- e2sm_indication::~e2sm_indication(void){
-
-  mdclog_write(MDCLOG_DEBUG, "Freeing event trigger object memory");
-
-  indication_head->choice.indicationHeader_Format1 = 0;
-
-  indication_msg->choice.indicationMessage_Format1 = 0;
-
-  ASN_STRUCT_FREE(asn_DEF_E2SM_Bouncer_IndicationHeader, indication_head);
-  ASN_STRUCT_FREE(asn_DEF_E2SM_Bouncer_IndicationMessage, indication_msg);
-
-
+  errbuf_len = 128;
 };
 
-bool e2sm_indication::encode_indication_header(unsigned char *buf, ssize_t *size, e2sm_indication_helper &helper){
+e2sm_indication::~e2sm_indication(void){
 
-  ASN_STRUCT_RESET(asn_DEF_E2SM_Bouncer_IndicationHeader, indication_head);
+  mdclog_write(MDCLOG_DEBUG, "Freeing e2sm_indication object memory");
 
-  bool res;
-  res = set_fields(indication_head, helper);
+  if (indication_head != NULL)
+    ASN_STRUCT_FREE(asn_DEF_E2SM_Bouncer_IndicationHeader, indication_head);
+
+  if (indication_msg != NULL)
+    ASN_STRUCT_FREE(asn_DEF_E2SM_Bouncer_IndicationMessage, indication_msg);
+
+  if (kpm_header != NULL)
+    ASN_STRUCT_FREE(asn_DEF_E2SM_KPM_IndicationHeader, kpm_header);
+
+  if (kpm_msg != NULL)
+    ASN_STRUCT_FREE(asn_DEF_E2SM_KPM_IndicationMessage, kpm_msg);
+
+}
+
+bool e2sm_indication::encode_bouncer_indication_header(unsigned char *buf, ssize_t *size, e2sm_indication_helper &helper){
+
+  indication_head = ( E2SM_Bouncer_IndicationHeader_t *)calloc(1, sizeof( E2SM_Bouncer_IndicationHeader_t));
+  assert(indication_head != 0);
+
+  bool res = set_fields(indication_head, helper);
   if (!res){
-
     return false;
   }
 
@@ -83,7 +87,7 @@ bool e2sm_indication::encode_indication_header(unsigned char *buf, ssize_t *size
   }
   else if (retval.encoded > *size){
     std::stringstream ss;
-    ss  <<"Error encoding event trigger definition. Reason =  encoded pdu size " << retval.encoded << " exceeds buffer size " << *size << std::endl;
+    ss  <<"Error encoding E2SM_Bouncer_IndicationHeader_Format1 event trigger definition. Reason =  encoded pdu size " << retval.encoded << " exceeds buffer size " << *size << std::endl;
     error_string = ss.str();
     return false;
   }
@@ -94,10 +98,11 @@ bool e2sm_indication::encode_indication_header(unsigned char *buf, ssize_t *size
   return true;
 }
 
-bool e2sm_indication::encode_indication_message(unsigned char *buf, ssize_t *size, e2sm_indication_helper &helper){
+bool e2sm_indication::encode_bouncer_indication_message(unsigned char *buf, ssize_t *size, e2sm_indication_helper &helper){
+  indication_msg = (E2SM_Bouncer_IndicationMessage_t*)calloc(1, sizeof(E2SM_Bouncer_IndicationMessage_t));
+  assert(indication_msg !=0);
 
-  bool res;
-  res = set_fields(indication_msg, helper);
+  bool res = set_fields(indication_msg, helper);
   if (!res){
     return false;
   }
@@ -135,15 +140,15 @@ bool e2sm_indication::encode_indication_message(unsigned char *buf, ssize_t *siz
 bool e2sm_indication::set_fields(E2SM_Bouncer_IndicationHeader_t * ref_indication_head, e2sm_indication_helper & helper){
 
  if(ref_indication_head == 0){
-    error_string = "Invalid reference for Event Trigger Definition set fields";
+    error_string = "Invalid reference for E2SM_Bouncer_IndicationHeader_t set fields";
     return false;
   }
 
   ref_indication_head->present = E2SM_Bouncer_IndicationHeader_PR_indicationHeader_Format1;
 
-  head_fmt1.indicationHeaderParam = helper.header;
+  ref_indication_head->choice.indicationHeader_Format1 = (E2SM_Bouncer_IndicationHeader_Format1_t * ) calloc(1, sizeof(E2SM_Bouncer_IndicationHeader_Format1_t));
 
-  ref_indication_head->choice.indicationHeader_Format1 = &head_fmt1;
+  ref_indication_head->choice.indicationHeader_Format1->indicationHeaderParam = helper.header;
 
   return true;
 };
@@ -151,20 +156,18 @@ bool e2sm_indication::set_fields(E2SM_Bouncer_IndicationHeader_t * ref_indicatio
 bool e2sm_indication::set_fields(E2SM_Bouncer_IndicationMessage_t * ref_indication_msg, e2sm_indication_helper & helper){
 
  if(ref_indication_msg == 0){
-    error_string = "Invalid reference for Event Action Definition set fields";
+    error_string = "Invalid reference for E2SM_Bouncer_IndicationMessage_t set fields";
     return false;
   }
   ref_indication_msg->present = E2SM_Bouncer_IndicationMessage_PR_indicationMessage_Format1;
 
-  msg_fmt1.indicationMsgParam.buf = helper.message;
-  msg_fmt1.indicationMsgParam.size = helper.message_len;
+  ref_indication_msg->choice.indicationMessage_Format1 = (E2SM_Bouncer_IndicationMessage_Format1_t *) calloc(1, sizeof(E2SM_Bouncer_IndicationMessage_Format1_t));
 
-
-  ref_indication_msg->choice.indicationMessage_Format1 = &msg_fmt1;
-
+  ref_indication_msg->choice.indicationMessage_Format1->indicationMsgParam.buf = helper.message;
+  ref_indication_msg->choice.indicationMessage_Format1->indicationMsgParam.size = helper.message_len;
 
   return true;
-};
+}
 
 bool e2sm_indication::get_fields(E2SM_Bouncer_IndicationHeader_t * ref_indictaion_header, e2sm_indication_helper & helper){
 
@@ -179,13 +182,87 @@ bool e2sm_indication::get_fields(E2SM_Bouncer_IndicationHeader_t * ref_indictaio
 
 bool e2sm_indication::get_fields(E2SM_Bouncer_IndicationMessage_t * ref_indication_message, e2sm_indication_helper & helper){
 
-	  if (ref_indication_message == 0){
-	  	    error_string = "Invalid reference for Indication Message get fields";
-	  	    return false;
-	  	  }
-	  helper.message = ref_indication_message->choice.indicationMessage_Format1->indicationMsgParam.buf;
-	  helper.message_len = ref_indication_message->choice.indicationMessage_Format1->indicationMsgParam.size;
+  if (ref_indication_message == 0){
+    error_string = "Invalid reference for Indication Message get fields";
+    return false;
+  }
+  helper.message = ref_indication_message->choice.indicationMessage_Format1->indicationMsgParam.buf;
+  helper.message_len = ref_indication_message->choice.indicationMessage_Format1->indicationMsgParam.size;
 
-	  return true;
+  return true;
+}
+
+bool e2sm_indication::decode_kpm_indication_header_format1(RICindicationHeader_t *header, e2sm_kpm_indication_fmt1_helper &helper) {
+  int count = 0;
+  uint8_t *bufptr = header->buf;
+  size_t len = header->size;
+
+  asn_dec_rval_t rval;
+  do {  // FIXME asn_decode always returns RC_WMORE and rval.consumed=0 bytes
+    rval = asn_decode(NULL, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2SM_KPM_IndicationHeader, (void **)&kpm_header, bufptr, len);
+    mdclog_write(MDCLOG_DEBUG, "%s:%d: asn_decode returned rval.code=%d, rval.consumed=%lu", __func__, __LINE__, rval.code, rval.consumed);
+
+    if (rval.code == RC_WMORE) {
+      count++;
+      if(count == 10) {
+        error_string = "Too many counts...";
+        return false;
+      }
+
+      bufptr += rval.consumed;
+      len -= rval.consumed;
+    }
+
+  } while(rval.code == RC_WMORE || count < 10);
+
+  if (rval.code == RC_FAIL) {
+    error_string = "Unable to decode E2SM_KPM_IndicationHeader";
+    return false;
   }
 
+  TimeStamp_t *time = &kpm_header->indicationHeader_formats.choice.indicationHeader_Format1->colletStartTime;
+  if (time->size != 8) {
+    error_string = "Unable to decode colletStartTime in E2SM_KPM_IndicationHeader. Reason: size is not 8";
+    return false;
+  }
+  memcpy(&helper.header.timestamp, time->buf, time->size);
+
+  return true;
+}
+
+bool e2sm_indication::decode_kpm_indication_msg_format1(RICindicationMessage_t *msg, e2sm_kpm_indication_fmt1_helper &helper) {
+  asn_dec_rval_t rval = asn_decode(NULL, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2SM_KPM_IndicationMessage, (void **)&kpm_msg, msg->buf, msg->size);
+  if (rval.code != RC_OK) {
+    error_string = "Unable to decode E2SM_KPM_IndicationMessage";
+    return false;
+  }
+
+  int len = kpm_msg->indicationMessage_formats.choice.indicationMessage_Format1->measInfoList->list.count;
+  if (kpm_msg->indicationMessage_formats.choice.indicationMessage_Format1->measData.list.count != 1) {
+    error_string = "The number of elements in measData list is not 1";
+    return false;
+  }
+
+  MeasurementDataItem_t **dataItems = kpm_msg->indicationMessage_formats.choice.indicationMessage_Format1->measData.list.array;
+  MeasurementDataItem_t *dataItem = dataItems[0];
+
+  if (len != dataItem->measRecord.list.count) {
+    error_string = "The number of elements in measRecord and measInfoList is not equal";
+    return false;
+  }
+
+  MeasurementInfoItem_t **infoItems = kpm_msg->indicationMessage_formats.choice.indicationMessage_Format1->measInfoList->list.array;
+  MeasurementRecordItem_t **records = dataItem->measRecord.list.array;
+
+  for (int i = 0; i < len; i++) {
+    MeasurementInfoItem_t *info = infoItems[i];
+    MeasurementRecordItem_t *data = records[i];
+
+    std::string name((char *)info->measType.choice.measName.buf, info->measType.choice.measName.size);
+    long value;
+    memcpy(&value, &data->choice.integer, sizeof(long));
+    helper.msg.measurements.emplace(name, value);
+  }
+
+  return true;
+}

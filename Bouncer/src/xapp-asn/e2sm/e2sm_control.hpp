@@ -21,39 +21,24 @@
 #ifndef SRC_XAPP_ASN_E2SM_E2SM_CONTROL_HPP_
 #define SRC_XAPP_ASN_E2SM_E2SM_CONTROL_HPP_
 
+extern "C" {
+  #include <OCTET_STRING.h>
+  #include <E2SM-RC-ControlHeader.h>
+  #include <E2SM-RC-ControlMessage.h>
+  #include <E2SM-RC-CallProcessID.h>
+  #include <E2SM-RC-ControlHeader-Format1.h>
+  #include <E2SM-RC-ControlMessage-Format1.h>
+}
 
 #include <sstream>
 #include <e2sm_helpers.hpp>
 #include <mdclog/mdclog.h>
 #include <vector>
 
-#include <E2SM-Bouncer-ControlHeader.h>
-#include <E2SM-Bouncer-ControlMessage.h>
-#include <E2SM-Bouncer-ControlHeader-Format1.h>
-#include <E2SM-Bouncer-ControlMessage-Format1.h>
-#include <B-Header.h>
-#include <B-Message.h>
-
-#include <E2SM-RC-ControlHeader.h>
-#include <E2SM-RC-ControlMessage.h>
-#include <E2SM-RC-CallProcessID.h>
-#include <E2SM-RC-ControlHeader-Format1.h>
-#include <E2SM-RC-ControlMessage-Format1.h>
-
 class e2sm_control {
 public:
 	e2sm_control(void);
   ~e2sm_control(void);
-
-  // E2SM KPM
-  bool set_fields(E2SM_Bouncer_ControlHeader_t *, e2sm_control_helper &);
-  bool set_fields(E2SM_Bouncer_ControlMessage_t *, e2sm_control_helper &);
-
-  bool get_fields(E2SM_Bouncer_ControlHeader_t *, e2sm_control_helper &);
-  bool get_fields(E2SM_Bouncer_ControlMessage_t *, e2sm_control_helper &);
-
-  bool encode_control_header(unsigned char *, ssize_t *, e2sm_control_helper &);
-  bool encode_control_message(unsigned char*, ssize_t *, e2sm_control_helper &);
 
   // E2SM RC
   bool set_fields(E2SM_RC_ControlHeader_t *control_header, UEID_t *ueid);
@@ -73,15 +58,9 @@ private:
   OCTET_STRING_t *generate_and_encode_nr_cgi(const char *plmnid, unsigned long nr_cell_id);
   void generate_e2sm_rc_ueid(UEID_t *ueid);
 
-  E2SM_Bouncer_ControlHeader_t * control_head; // used for encoding
-  E2SM_Bouncer_ControlMessage_t* control_msg;
-  E2SM_Bouncer_ControlHeader_Format1_t head_fmt1;
-  E2SM_Bouncer_ControlMessage_Format1_t msg_fmt1;
-
   E2SM_RC_ControlHeader_t *rc_control_header;
   E2SM_RC_ControlMessage_t *rc_control_msg;
   E2SM_RC_CallProcessID_t *rc_call_proc_id;
-
 
   size_t errbuf_len;
   char errbuf[128];

@@ -35,12 +35,9 @@
 #include "e2ap_indication.hpp"
 #include "subscription_delete_request.hpp"
 #include "subscription_delete_response.hpp"
-#include "subscription_helper.hpp"
 #include "subscription_request.hpp"
 #include "subscription_response.hpp"
-#include "e2sm_subscription.hpp"
 #include "subs_mgmt.hpp"
-#include "e2sm_control.hpp"
 
 #define MAX_RMR_RECV_SIZE 2<<15
 
@@ -63,8 +60,6 @@ public:
 	 bool decode_subscription_response(unsigned char*, size_t );
 
 	 bool a1_policy_handler(char *, int* , a1_policy_helper &);
-
-	 void testfunction() {std::cout << "<<<<<<<<<<<<<<<<<<IN TEST FUNCTION<<<<<<<<<<<<<<<" << std::endl;}
 };
 
 

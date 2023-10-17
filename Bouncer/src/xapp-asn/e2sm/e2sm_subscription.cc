@@ -18,162 +18,157 @@
 
 /* Classes to handle E2 service model based on e2sm-Bouncer-v001.asn */
 
+#include <sstream>
+#include <vector>
+
 #include "e2sm_subscription.hpp"
 
- //initialize
- e2sm_subscription::e2sm_subscription(void){
+//initialize
+e2sm_subscription::e2sm_subscription(void){
 
-	memset(&event_fmt1, 0, sizeof(E2SM_Bouncer_EventTriggerDefinition_Format1_t));
+  kpm_trigger_def = (E2SM_KPM_EventTriggerDefinition_t *) calloc(1, sizeof(E2SM_KPM_EventTriggerDefinition_t));
+  kpm_action_def = (E2SM_KPM_ActionDefinition_t *) calloc(1, sizeof(E2SM_KPM_ActionDefinition_t));
 
-	memset(&actn_fmt1, 0, sizeof(E2SM_Bouncer_ActionDefinition_Format1_t));
+  errbuf_len = 128;
+};
 
+e2sm_subscription::~e2sm_subscription(void){
 
-	ran_param = 0;
-	ran_param = (RANparameter_Item_t*)calloc(1, sizeof(RANparameter_Item_t));
-	assert(ran_param != 0);
+  mdclog_write(MDCLOG_DEBUG, "Freeing e2sm_subscription object memory");
 
-    event_trigger = 0;
-    event_trigger = ( E2SM_Bouncer_EventTriggerDefinition_t *)calloc(1, sizeof( E2SM_Bouncer_EventTriggerDefinition_t));
-    assert(event_trigger != 0);
-
-    action_defn = 0;
-    action_defn = (E2SM_Bouncer_ActionDefinition_t*)calloc(1, sizeof(E2SM_Bouncer_ActionDefinition_t));
-    assert(action_defn !=0);
-
-    errbuf_len = 128;
-  };
-
- e2sm_subscription::~e2sm_subscription(void){
-
-  mdclog_write(MDCLOG_DEBUG, "Freeing event trigger object memory");
-
-  event_trigger->choice.eventDefinition_Format1 = 0;
-
-  action_defn->choice.actionDefinition_Format1 = 0;
-
-  free(ran_param);
-
-  ASN_STRUCT_FREE(asn_DEF_E2SM_Bouncer_EventTriggerDefinition, event_trigger);
-  ASN_STRUCT_FREE(asn_DEF_E2SM_Bouncer_ActionDefinition, action_defn);
-
+  ASN_STRUCT_FREE(asn_DEF_E2SM_KPM_EventTriggerDefinition, kpm_trigger_def);
+  ASN_STRUCT_FREE(asn_DEF_E2SM_KPM_ActionDefinition, kpm_action_def);
 
 };
 
-bool e2sm_subscription::encode_event_trigger(unsigned char *buf, ssize_t *size, e2sm_subscription_helper &helper){
+bool e2sm_subscription::encodeKPMTriggerDefinition(unsigned char *buffer, ssize_t *buflen, e2sm_kpm_subscription_helper& helper) {
+  std::stringstream ss;
 
-  ASN_STRUCT_RESET(asn_DEF_E2SM_Bouncer_EventTriggerDefinition, event_trigger);
+  if (!buffer) {
+      ss << "Invalid reference for buffer to enconde KPM EventTriggerDefinition in fucntion " << __func__;
+      error_string = ss.str();
+      return false;
+  }
 
-  bool res;
-  res = set_fields(event_trigger, helper);
-  if (!res){
-
+  if (!set_fields(kpm_trigger_def, helper)) {
     return false;
   }
 
-  int ret_constr = asn_check_constraints(&asn_DEF_E2SM_Bouncer_EventTriggerDefinition, event_trigger, errbuf, &errbuf_len);
-  if(ret_constr){
-    error_string.assign(&errbuf[0], errbuf_len);
-    return false;
+  char errbuf[4096] = {0,};
+  size_t errlen = 4096;
+
+  if (asn_check_constraints(&asn_DEF_E2SM_KPM_EventTriggerDefinition, kpm_trigger_def, errbuf, &errlen) != 0) {
+      ss << "Constraints for " << asn_DEF_E2SM_KPM_EventTriggerDefinition.name << " did not met. Reason: " << errbuf;
+      error_string = ss.str();
   }
 
-  xer_fprint(stdout, &asn_DEF_E2SM_Bouncer_EventTriggerDefinition, event_trigger);
-
-  asn_enc_rval_t retval = asn_encode_to_buffer(0, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2SM_Bouncer_EventTriggerDefinition, event_trigger, buf, *size);
-
-  if(retval.encoded == -1){
-    error_string.assign(strerror(errno));
-    return false;
+  if (mdclog_level_get() > MDCLOG_INFO) {
+      asn_fprint(stderr, &asn_DEF_E2SM_KPM_EventTriggerDefinition, kpm_trigger_def);
   }
-  else if (retval.encoded > *size){
+
+  asn_enc_rval_t rval;
+  rval = asn_encode_to_buffer(0, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2SM_KPM_EventTriggerDefinition, kpm_trigger_def, buffer, *buflen);
+  if (rval.encoded == -1) {
+      ss << "Serialization of " << asn_DEF_E2SM_KPM_EventTriggerDefinition.name << " failed, type=" << rval.failed_type->name;
+      error_string = ss.str();
+      return false;
+  }
+  else if (rval.encoded > *buflen) {
+      ss << "Buffer of size " << *buflen << " is too small for " << asn_DEF_E2SM_KPM_EventTriggerDefinition.name << ", need " << rval.encoded;
+      error_string = ss.str();
+      return false;
+  }
+
+  *buflen = rval.encoded;
+  return true;
+}
+
+bool e2sm_subscription::encodeKPMActionDefinition(unsigned char *buffer, ssize_t *buflen, e2sm_kpm_subscription_helper& helper) {
     std::stringstream ss;
-    ss  <<"Error encoding event trigger definition. Reason =  encoded pdu size " << retval.encoded << " exceeds buffer size " << *size << std::endl;
-    error_string = ss.str();
+
+    if (!buffer) {
+        ss << "Invalid reference for buffer to enconde E2SM_KPM_ActionDefinition in function " << __func__;
+        error_string = ss.str();
+        return false;
+    }
+
+    if (!set_fields(kpm_action_def, helper)) {
+      return false;
+    }
+
+    char errbuf[4096] = {0,};
+    size_t errlen = 4096;
+
+    if (asn_check_constraints(&asn_DEF_E2SM_KPM_ActionDefinition, kpm_action_def, errbuf, &errlen) != 0) {
+        ss << "Constraints for " << asn_DEF_E2SM_KPM_ActionDefinition.name << " did not met. Reason: " << errbuf;
+        error_string = ss.str();
+    }
+
+    if (mdclog_level_get() > MDCLOG_INFO) {
+      asn_fprint(stderr, &asn_DEF_E2SM_KPM_ActionDefinition, kpm_action_def);
+    }
+
+    asn_enc_rval_t rval;
+    rval = asn_encode_to_buffer(0, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2SM_KPM_ActionDefinition, kpm_action_def, buffer, *buflen);
+    if (rval.encoded == -1) {
+        ss << "Serialization of " << asn_DEF_E2SM_KPM_ActionDefinition.name << " failed, type=" << rval.failed_type->name;
+        error_string = ss.str();
+        return false;
+    }
+    else if (rval.encoded > *buflen) {
+        ss << "Buffer of size " << *buflen << " is too small for " << asn_DEF_E2SM_KPM_ActionDefinition.name << ", need " << rval.encoded;
+        error_string = ss.str();
+        return false;
+    }
+
+    *buflen = rval.encoded;
+    return true;
+}
+
+bool e2sm_subscription::set_fields(E2SM_KPM_EventTriggerDefinition_t *trigger_def, e2sm_kpm_subscription_helper& helper) {
+  if(trigger_def == NULL){
+    error_string = "Invalid reference for KPM Event Trigger Definition set fields";
     return false;
   }
-  else{
-    *size = retval.encoded;
-  }
+
+  // RICeventTriggerDefinition Format 1
+	kpm_trigger_def->eventDefinition_formats.choice.eventDefinition_Format1 = (E2SM_KPM_EventTriggerDefinition_Format1_t *) calloc(1, sizeof(E2SM_KPM_EventTriggerDefinition_Format1_t));
+	kpm_trigger_def->eventDefinition_formats.choice.eventDefinition_Format1->reportingPeriod = helper.trigger.reportingPeriod;
+	kpm_trigger_def->eventDefinition_formats.present = E2SM_KPM_EventTriggerDefinition__eventDefinition_formats_PR_eventDefinition_Format1;
 
   return true;
 }
 
-bool e2sm_subscription::encode_action_defn(unsigned char *buf, ssize_t *size, e2sm_subscription_helper &helper){
-
-  bool res;
-  res = set_fields(action_defn, helper);
-  if (!res){
+bool e2sm_subscription::set_fields(E2SM_KPM_ActionDefinition_t *action_def, e2sm_kpm_subscription_helper& helper) {
+  if(action_def == NULL){
+    error_string = "Invalid reference for KPM Event Trigger Definition set fields";
     return false;
   }
 
+  // RICactionDefinition Style 1
+	action_def->ric_Style_Type = 1;
+	action_def->actionDefinition_formats.present = E2SM_KPM_ActionDefinition__actionDefinition_formats_PR_actionDefinition_Format1;
+	action_def->actionDefinition_formats.choice.actionDefinition_Format1 = (E2SM_KPM_ActionDefinition_Format1_t *) calloc(1, sizeof(E2SM_KPM_ActionDefinition_Format1_t));
 
-  int ret_constr = asn_check_constraints(&asn_DEF_E2SM_Bouncer_ActionDefinition, action_defn, errbuf, &errbuf_len);
-  if(ret_constr){
-    error_string.assign(&errbuf[0], errbuf_len);
-    return false;
-  }
+	// ActionDefinition_Format1 (Subscription Information)
+	E2SM_KPM_ActionDefinition_Format1_t *actdef_fmt1 = action_def->actionDefinition_formats.choice.actionDefinition_Format1;
+	actdef_fmt1->granulPeriod = helper.action.granulPeriod;
 
-  xer_fprint(stdout, &asn_DEF_E2SM_Bouncer_ActionDefinition, action_defn);
+	// RSRP Measurement
+  std::vector<std::string> measurements = {"RSRP", "RSRQ", "CQI", "DRB.RlcPacketDropRateDl", "DRB.RlcSduTransmittedVolumeDL", "DRB.RlcSduTransmittedVolumeUL"};
+  for (std::string meas : measurements) {
+    MeasurementInfoItem_t *minfo_1 = (MeasurementInfoItem_t *) calloc(1, sizeof(MeasurementInfoItem_t));
+    minfo_1->measType.present = MeasurementType_PR_measName;
+    // OCTET_STRING_t *meas_name_1 = OCTET_STRING_new_fromBuf(&asn_DEF_MeasurementTypeName, "RSRP", 4);
+    OCTET_STRING_t *meas_name_1 = OCTET_STRING_new_fromBuf(&asn_DEF_MeasurementTypeName, meas.c_str(), meas.length());
+    memcpy(&minfo_1->measType.choice.measName, meas_name_1, sizeof(OCTET_STRING_t));
+    free(meas_name_1);
+    LabelInfoItem_t *linfo_1 = (LabelInfoItem_t *) calloc(1, sizeof(LabelInfoItem_t));
+    linfo_1->measLabel.noLabel = (long *) calloc(1, sizeof(long));
+    ASN_SEQUENCE_ADD(&minfo_1->labelInfoList.list, linfo_1);
 
-  asn_enc_rval_t retval = asn_encode_to_buffer(0, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2SM_Bouncer_ActionDefinition, action_defn, buf, *size);
-
-  if(retval.encoded == -1){
-    error_string.assign(strerror(errno));
-    return false;
-  }
-  else if (retval.encoded > *size){
-    std::stringstream ss;
-    ss  <<"Error encoding action definition. Reason =  encoded pdu size " << retval.encoded << " exceeds buffer size " << *size << std::endl;
-    error_string = ss.str();
-    return false;
-  }
-  else{
-    *size = retval.encoded;
+    ASN_SEQUENCE_ADD(&actdef_fmt1->measInfoList.list, minfo_1);
   }
 
   return true;
 }
-
-bool e2sm_subscription::set_fields(E2SM_Bouncer_EventTriggerDefinition_t * ref_event_trigger, e2sm_subscription_helper & helper){
-
- if(ref_event_trigger == 0){
-    error_string = "Invalid reference for Event Trigger Definition set fields";
-    return false;
-  }
-
-  ref_event_trigger->present = E2SM_Bouncer_EventTriggerDefinition_PR_eventDefinition_Format1;
-
-  event_fmt1.triggerNature = helper.triger_nature;
-
-  ref_event_trigger->choice.eventDefinition_Format1 = &event_fmt1;
-
-  return true;
-};
-
-bool e2sm_subscription::set_fields(E2SM_Bouncer_ActionDefinition_t * ref_action_defn, e2sm_subscription_helper & helper){
-
- if(ref_action_defn == 0){
-    error_string = "Invalid reference for Event Action Definition set fields";
-    return false;
-  }
-  ref_action_defn->present = E2SM_Bouncer_ActionDefinition_PR_actionDefinition_Format1;
-
-
-  ranparam_helper_t paramlst = helper.get_paramlist();
-
-  for(RANParam_Helper item:paramlst){
-	  ran_param->ranParameter_ID = item.getran_helper()._param_id;
-	  ran_param->ranParameter_Name.buf = item.getran_helper()._param_name;
-	  ran_param->ranParameter_Name.size = item.getran_helper()._param_name_len;
-	  ran_param->ranParameter_Test = item.getran_helper()._param_test;
-	  ran_param->ranParameter_Value.buf = item.getran_helper()._param_value;
-	  ran_param->ranParameter_Value.size = item.getran_helper()._param_value_len;
-	  ASN_SEQUENCE_ADD(&(actn_fmt1.ranParameter_List->list.array), ran_param);
-  }
-
-
-  ref_action_defn->choice.actionDefinition_Format1 = &actn_fmt1;
-
-
-  return true;
-};
-

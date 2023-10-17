@@ -32,50 +32,34 @@
 // for releasing memory by external calling function)
 ric_indication::ric_indication(void){
 
-  e2ap_pdu_obj = 0;
   e2ap_pdu_obj = (E2AP_PDU_t * )calloc(1, sizeof(E2AP_PDU_t));
   assert(e2ap_pdu_obj != 0);
 
-  initMsg = 0;
-  initMsg = (InitiatingMessage_t * )calloc(1, sizeof(InitiatingMessage_t));
-  assert(initMsg != 0);
-
-  IE_array = 0;
-  IE_array = (RICindication_IEs_t *)calloc(NUM_INDICATION_IES, sizeof(RICindication_IEs_t));
-  assert(IE_array != 0);
-
-  e2ap_pdu_obj->present = E2AP_PDU_PR_initiatingMessage;
-  e2ap_pdu_obj->choice.initiatingMessage = initMsg;
-
-
-
-
+  initMsg = NULL;
+  IE_array = NULL;
 };
 
 
 
 // Clear assigned protocolIE list from RIC indication IE container
 ric_indication::~ric_indication(void){
-
   mdclog_write(MDCLOG_DEBUG, "Freeing E2AP Indication object memory");
-  // RICindication_t *ricIndication  = &(initMsg->value.choice.RICindication);
-  // for(int i = 0; i < ricIndication->protocolIEs.list.size; i++){
-  //   ricIndication->protocolIEs.list.array[i] = 0;
-  // }
-  // if (ricIndication->protocolIEs.list.size > 0){
-  //   free(ricIndication->protocolIEs.list.array);
-  //   ricIndication->protocolIEs.list.array = 0;
-  //   ricIndication->protocolIEs.list.count = 0;
-  //   ricIndication->protocolIEs.list.size = 0;
-  // }
 
-  free(IE_array);
+  if (IE_array != NULL)
+    free(IE_array);
+
   ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, e2ap_pdu_obj);
+
   mdclog_write(MDCLOG_DEBUG, "Freed E2AP Indication object memory");
 }
 
 
 bool ric_indication::encode_e2ap_indication(unsigned char *buf, ssize_t *size, ric_indication_helper & dinput){
+  initMsg = (InitiatingMessage_t * )calloc(1, sizeof(InitiatingMessage_t));
+  assert(initMsg != 0);
+
+  e2ap_pdu_obj->present = E2AP_PDU_PR_initiatingMessage;
+  e2ap_pdu_obj->choice.initiatingMessage = initMsg;
 
   initMsg->procedureCode = ProcedureCode_id_RICindication;
   initMsg->criticality = Criticality_ignore;
@@ -119,6 +103,34 @@ bool ric_indication::encode_e2ap_indication(unsigned char *buf, ssize_t *size, r
 
 }
 
+bool ric_indication::decode_e2ap_indication(unsigned char *buf, ssize_t size, ric_indication_helper & doutput) {
+  asn_transfer_syntax syntax = ATS_ALIGNED_BASIC_PER;
+
+  ASN_STRUCT_RESET(asn_DEF_E2AP_PDU, e2ap_pdu_obj);
+
+  auto rval = asn_decode(nullptr, syntax, &asn_DEF_E2AP_PDU, (void **)&e2ap_pdu_obj, buf, size);
+
+  mdclog_write(MDCLOG_DEBUG, "%s:%d: rval.code = %d, rval.consumed = %lu", __func__, __LINE__, rval.code, rval.consumed);
+
+  if (rval.code != RC_OK) {
+    mdclog_write(MDCLOG_ERR, "Decoding error on E2AP Indication. Next is the partially decoded E2AP_PDU"); // we consider RC_WMORE as error
+    asn_fprint(stderr, &asn_DEF_E2AP_PDU, e2ap_pdu_obj);
+    std::stringstream ss;
+    ss << "rval.code=" << rval.code << " rval.consumed=" << rval.consumed;
+    error_string = ss.str();
+    return false;
+  }
+
+  if (mdclog_level_get() > MDCLOG_INFO)
+    asn_fprint(stderr, &asn_DEF_E2AP_PDU, e2ap_pdu_obj);
+
+  if (!get_fields(e2ap_pdu_obj->choice.initiatingMessage, doutput)) {
+    return false;
+  }
+
+  return true;
+}
+
 bool ric_indication::set_fields(InitiatingMessage_t *initMsg, ric_indication_helper &dinput){
   unsigned int ie_index;
 
@@ -127,6 +139,8 @@ bool ric_indication::set_fields(InitiatingMessage_t *initMsg, ric_indication_hel
     return false;
   }
 
+  IE_array = (RICindication_IEs_t *)calloc(NUM_INDICATION_IES, sizeof(RICindication_IEs_t));
+  assert(IE_array != 0);
 
   RICindication_t * ric_indication = &(initMsg->value.choice.RICindication);
   ric_indication->protocolIEs.list.count = 0;

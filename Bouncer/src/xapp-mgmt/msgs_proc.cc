@@ -22,6 +22,7 @@
 #include <string>
 
 #include "msgs_proc.hpp"
+#include "e2sm_indication.hpp"
 
 
 bool XappMsgHandler::encode_subscription_delete_request(unsigned char* buffer, ssize_t *buf_len){
@@ -306,35 +307,45 @@ void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
 
 		case (RIC_INDICATION):
 		{
-			mdclog_write(MDCLOG_DEBUG, "Decoding indication for msg = %d", message->mtype);
-
-			ASN_STRUCT_RESET(asn_DEF_E2AP_PDU, e2pdu);
-			asn_transfer_syntax syntax;
-			syntax = ATS_ALIGNED_BASIC_PER;
-
-			mdclog_write(MDCLOG_DEBUG, "Data_size = %d", message->len);
-
-			auto rval = asn_decode(nullptr, syntax, &asn_DEF_E2AP_PDU, (void **)&e2pdu, message->payload, message->len);
-
-			if (rval.code == RC_OK)
-			{
-				mdclog_write(MDCLOG_DEBUG, "rval.code = %d ", rval.code);
-			}
-			else
-			{
-				mdclog_write(MDCLOG_ERR, " rval.code = %d ", rval.code);
-				break;
-			}
-
-			if (mdclog_level_get() > MDCLOG_INFO)
-				asn_fprint(stderr, &asn_DEF_E2AP_PDU, e2pdu);
+			mdclog_write(MDCLOG_DEBUG, "Decoding indication for msg = %d, data_size = %d", message->mtype, message->len);
 
 			ric_indication indication;
 			ric_indication_helper ind_helper;
-			string error_msg;
-			indication.get_fields(e2pdu->choice.initiatingMessage, ind_helper);
+			// string error_msg;
 
-			// TODO ######## this is specific for E2SM-RC
+			if (!indication.decode_e2ap_indication(message->payload, message->len, ind_helper)) {
+				mdclog_write(MDCLOG_ERR, "Error decoding E2AP Indication. Reason: %s", indication.get_error().c_str());
+				break;
+			}
+
+			// ######## this is specific for E2SM-KPM
+			e2sm_indication kpm_indicaton;
+			e2sm_kpm_indication_fmt1_helper kpm_helper;
+
+			// FIXME not able to decode header correctly
+			// if (!kpm_indicaton.decode_kpm_indication_header_format1(&ind_helper.indication_header, kpm_helper)) {
+			// 	mdclog_write(MDCLOG_ERR, "Error decoding E2SM KPM Indication Header. Reason: %s", kpm_indicaton.get_error().c_str());
+			// 	break;
+			// }
+
+			if (!kpm_indicaton.decode_kpm_indication_msg_format1(&ind_helper.indication_msg, kpm_helper)) {
+				mdclog_write(MDCLOG_ERR, "Error decoding E2SM KPM Indication Message. Reason: %s", kpm_indicaton.get_error().c_str());
+				break;
+			}
+
+			stringstream ss;
+			// ss << "colletStartTime=" << kpm_helper.header.timestamp;
+			for (auto it : kpm_helper.msg.measurements) {
+				// ss << ", " << it.first << "=" << it.second;
+				ss << it.first << "=" << it.second << " ";
+			}
+
+			mdclog_write(MDCLOG_INFO, "KPM Indication measurement values: %s", ss.str().c_str());
+			// ######## end of specific for E2SM-KPM
+
+
+
+			// ######## this is specific for E2SM-RC
 			// uint8_t ctrl_header_buf[8192] = {0, };
 			// ssize_t ctrl_header_buf_size = 8192;
 
@@ -406,7 +417,7 @@ void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
 			// 	mdclog_write(MDCLOG_ERR, "E2AP Control Request encoding error. Reason = %s", control_req.get_error().c_str());
 			// 	*resend = false;
 			// }
-			// TODO ######## end of specific for E2SM-RC
+			// ######## end of specific for E2SM-RC
 
 
 			if (mdclog_level_get() > MDCLOG_INFO)
