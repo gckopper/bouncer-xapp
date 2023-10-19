@@ -89,7 +89,7 @@ bool XappRmr::xapp_rmr_send(xapp_rmr_header *hdr, void *payload){
 	std::stringstream ss;
 
 	thread_id << my_id;
-	mdclog_write(MDCLOG_INFO, "Sending thread %s",  thread_id.str().c_str());
+	mdclog_write(MDCLOG_DEBUG, "Sending thread %s",  thread_id.str().c_str());
 
 
 	int rmr_attempts = _nattempts;
@@ -104,16 +104,16 @@ bool XappRmr::xapp_rmr_send(xapp_rmr_header *hdr, void *payload){
 		return false;
 	}
 
-	mdclog_write(MDCLOG_INFO,"------ start of Xid updated, file= %s, line=%d",__FILE__,__LINE__);
+	mdclog_write(MDCLOG_DEBUG,"------ start of Xid updated, file= %s, line=%d",__FILE__,__LINE__);
 	int test_support_xact_count = rand();
         char *xid = (char *) malloc( sizeof( char ) * RMR_MAX_SRC );
         memset(xid, '\0',RMR_MAX_SRC);
 	snprintf(xid, RMR_MAX_XID, "%010d", test_support_xact_count );
 
-	mdclog_write(MDCLOG_INFO,"before xapp_send_buff Xid=%s, file= %s, line=%d",xid,__FILE__,__LINE__);
+	mdclog_write(MDCLOG_DEBUG,"before xapp_send_buff Xid=%s, file= %s, line=%d",xid,__FILE__,__LINE__);
         memcpy(_xapp_send_buff->xaction, xid, RMR_MAX_XID);
 
-	mdclog_write(MDCLOG_INFO,"Xid=%s, file= %s, line=%d",_xapp_send_buff->xaction,__FILE__,__LINE__);
+	mdclog_write(MDCLOG_DEBUG,"Xid=%s, file= %s, line=%d",_xapp_send_buff->xaction,__FILE__,__LINE__);
 
 	memcpy(_xapp_send_buff->payload, payload, hdr->payload_length);
 	_xapp_send_buff->len = hdr->payload_length;
@@ -131,18 +131,19 @@ bool XappRmr::xapp_rmr_send(xapp_rmr_header *hdr, void *payload){
 			rmr_attempts--;
 		}
 		else if (_xapp_send_buff->state == RMR_OK){
-			mdclog_write(MDCLOG_INFO,"Message Sent: RMR State = RMR_OK");
-        	mdclog_write(MDCLOG_INFO,"_xapp_send_buff->xaction: %s",_xapp_send_buff->xaction);
+			mdclog_write(MDCLOG_DEBUG,"Message Sent: RMR State = RMR_OK");
+			mdclog_write(MDCLOG_DEBUG,"_xapp_send_buff->xaction: %s",_xapp_send_buff->xaction);
 			rmr_attempts = 0;
 			_xapp_send_buff = NULL;
 			return true;
 		}
 		else
 		{
-			mdclog_write(MDCLOG_INFO,"Need to retry RMR: state=%d, attempt=%d, file=%s, line=%d",_xapp_send_buff->state, rmr_attempts,__FILE__,__LINE__);
-			if(_xapp_send_buff->state == RMR_ERR_RETRY){
-				usleep(1);			}
-				rmr_attempts--;
+			mdclog_write(MDCLOG_WARN,"Need to retry RMR: state=%d, attempt=%d, file=%s, line=%d",_xapp_send_buff->state, rmr_attempts,__FILE__,__LINE__);
+			if(_xapp_send_buff->state == RMR_ERR_RETRY) {
+				usleep(1);
+			}
+			rmr_attempts--;
 		}
 		sleep(1);
 	}

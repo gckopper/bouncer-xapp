@@ -5,7 +5,7 @@
             {
                 "name": "bouncer-xapp",
                 "image": {
-                    "registry": "127.0.0.1:32000",
+                    "registry": "example.com:80",
                     "name": "bouncer",
                     "tag": "latest"
                	}

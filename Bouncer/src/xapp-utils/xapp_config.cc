@@ -190,6 +190,12 @@ void XappSettings::loadDefaultSettings(){
 	if(theSettings[MNC].empty()){
 		theSettings[MNC] = DEFAULT_MNC;
 	}
+	if(theSettings[A1_POLICY_SCHEMA_FILE].empty()){
+		theSettings[A1_POLICY_SCHEMA_FILE] = DEFAULT_A1_POLICY_SCHEMA_FILE;
+	}
+	if(theSettings[A1_PAYLOAD_SCHEMA_FILE].empty()){
+		theSettings[A1_PAYLOAD_SCHEMA_FILE] = DEFAULT_A1_PAYLOAD_SCHEMA_FILE;
+	}
 
 }
 
@@ -218,6 +224,14 @@ void XappSettings::loadEnvVarSettings(){
 	if (const char *env_config_file = std::getenv("CONFIG_FILE")){
 		theSettings[CONFIG_FILE].assign(env_config_file);
 		mdclog_write(MDCLOG_INFO,"Config file set to %s from environment variable", theSettings[CONFIG_FILE].c_str());
+	}
+	if (const char *env_schema_file = std::getenv("A1_POLICY_SCHEMA_FILE")){
+		theSettings[A1_POLICY_SCHEMA_FILE].assign(env_schema_file);
+		mdclog_write(MDCLOG_INFO,"A1 Policy Schema file set to %s from environment variable", theSettings[A1_POLICY_SCHEMA_FILE].c_str());
+	}
+	if (const char *env_schema_file = std::getenv("A1_PAYLOAD_SCHEMA_FILE")){
+		theSettings[A1_PAYLOAD_SCHEMA_FILE].assign(env_schema_file);
+		mdclog_write(MDCLOG_INFO,"A1 Policy Schema file set to %s from environment variable", theSettings[A1_PAYLOAD_SCHEMA_FILE].c_str());
 	}
 	if (char *env = getenv("RMR_SRC_ID")) {
 		theSettings[RMR_SRC_ID].assign(env);

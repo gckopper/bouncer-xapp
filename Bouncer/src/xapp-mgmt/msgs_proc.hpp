@@ -28,6 +28,7 @@
 #include <mdclog/mdclog.h>
 
 #include "a1_helper.hpp"
+#include "a1_mgmt.hpp"
 #include "e2ap_control.hpp"
 #include "E2SM-RC-ControlMessage-Format1-Item.h"
 #include "E2SM-RC-IndicationMessage-Format5-Item.h"
@@ -46,11 +47,11 @@ class XappMsgHandler{
 private:
 	std::string xapp_id;
 	SubscriptionHandler *_ref_sub_handler;
-	SchemaDocument *policy_schema;
+	A1Handler *_ref_a1_handler;
 public:
 	//constructor for xapp_id.
 	 XappMsgHandler(std::string xid){xapp_id=xid; _ref_sub_handler=NULL;};
-	 XappMsgHandler(std::string xid, SubscriptionHandler &subhandler, SchemaDocument *schema){xapp_id=xid; _ref_sub_handler=&subhandler; policy_schema=schema;};
+	 XappMsgHandler(std::string xid, SubscriptionHandler &subhandler, A1Handler &a1handler){xapp_id=xid; _ref_sub_handler=&subhandler; _ref_a1_handler=&a1handler;};
 
 	 void operator() (rmr_mbuf_t *, bool*);
 

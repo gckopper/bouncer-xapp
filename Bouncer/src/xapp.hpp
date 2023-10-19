@@ -81,10 +81,7 @@ public:
 
   void fetch_connected_nodeb_list();
 
-  SchemaDocument *schema_document;
-
 private:
-  void startup_subscribe_kpm_requests(void);
   void startup_subscribe_requests();
   void shutdown_delete_subscriptions(void);
   void startup_get_policies(void );

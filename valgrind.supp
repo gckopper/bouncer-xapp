@@ -6,3 +6,9 @@
   ...
   obj:/usr/local/lib/librmr_si.*
 }
+{
+  suppress_mdclog_lib
+  Memcheck:Leak
+  ...
+  obj:/usr/lib/x86_64-linux-gnu/libmdclog.*
+}

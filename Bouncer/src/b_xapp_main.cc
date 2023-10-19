@@ -17,6 +17,7 @@
 */
 
 #include "xapp.hpp"
+#include "a1_mgmt.hpp"
 #include <mdclog/mdclog.h>
 
 using namespace web;
@@ -79,16 +80,26 @@ int main(int argc, char *argv[]) {
 	}
 	mdclog_write(MDCLOG_INFO, "Starting Listener Threads. Number of Workers = %d", num_threads);
 
-	// FIXME passing an invalid pointer for schema_document to XappMsgHandler
-	std::unique_ptr<XappMsgHandler> mp_handler = std::make_unique<XappMsgHandler>(config[XappSettings::SettingName::XAPP_ID], sub_handler, b_xapp->schema_document);
+	std::unique_ptr<A1Handler> a1handler;
+	try {
+		a1handler = std::make_unique<A1Handler>(config);
+
+	} catch (std::exception &e) {
+		mdclog_write(MDCLOG_ERR, "Unable to startup xapp %s. Reason = %s",
+					config[XappSettings::SettingName::XAPP_ID].c_str(),  e.what());
+
+		exit(EXIT_FAILURE);
+	}
+
+	std::unique_ptr<XappMsgHandler> mp_handler = std::make_unique<XappMsgHandler>(config[XappSettings::SettingName::XAPP_ID], sub_handler, std::ref(*a1handler));
 
 	b_xapp->start_xapp_receiver(std::ref(*mp_handler), num_threads);
 
-	sleep(2);	// we need to wait to allow kubernetes dns to recognize this xApp before proceed to startup routines
+	sleep(2);	// we need to wait to allow kubernetes dns to notice this xApp before proceed to startup routines
 
 	//Startup E2 subscription
 	try {
-		b_xapp->startup(sub_handler);	// FIXME only here we create the schema document instance
+		b_xapp->startup(sub_handler);
 
 	} catch(std::exception &e) {
 		mdclog_write(MDCLOG_ERR, "Unable to startup xapp %s. Reason = %s",

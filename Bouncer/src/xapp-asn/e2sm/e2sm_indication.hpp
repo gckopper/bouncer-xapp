@@ -36,7 +36,7 @@
 #include "RICindicationHeader.h"
 #include "RICindicationMessage.h"
 #include "E2SM-KPM-IndicationHeader.h"
-  #include "E2SM-KPM-IndicationMessage.h"
+#include "E2SM-KPM-IndicationMessage.h"
 
 class e2sm_indication {
 public:

@@ -49,6 +49,7 @@ struct a1_policy_helper{
 	std::string policy_instance_id;
 	std::string handler_id;
 	std::string status;
+	std::string payload;
     std::vector<std::shared_ptr<ue_rc_helper>> ue_list;
 };
 

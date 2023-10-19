@@ -110,7 +110,7 @@ RUN export CPATH=$CPATH:/usr/local/include && \
     make clean && \
     make -j `nproc` install
 
-COPY ${SCHEMA_PATH}/* init/routes.txt init/config-map.yaml schemas/mwc-xapp-policy.json /etc/xapp/
+COPY ${SCHEMA_PATH}/* init/routes.txt init/config-map.yaml schemas/a1-policy-schema.json schemas/a1-payload-schema.json /etc/xapp/
 # COPY init/init_script.py /etc/xapp/init_script.py
 
 
@@ -139,7 +139,9 @@ ENV RMR_RTG_SVC="9999" \
     LD_LIBRARY_PATH="/usr/local/lib:/usr/local/libexec" \
     VERBOSE=0 \
     CONFIG_MAP_NAME=/etc/xapp/config-map.yaml \
-    CONFIG_FILE=/opt/ric/config/config-file.json
+    CONFIG_FILE=/opt/ric/config/config-file.json \
+    A1_POLICY_SCHEMA_FILE=/etc/xapp/a1-policy-schema.json \
+    A1_PAYLOAD_SCHEMA_FILE=/etc/xapp/a1-payload-schema.json
 
 # CMD python3 /etc/xapp/init_script.py $CONFIG_FILE
 # CMD ["sleep", "360000"]
