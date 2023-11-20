@@ -30,6 +30,7 @@
 #include "a1_helper.hpp"
 #include "a1_mgmt.hpp"
 #include "e2ap_control.hpp"
+#include "e2sm_control.hpp"
 #include "E2SM-RC-ControlMessage-Format1-Item.h"
 #include "E2SM-RC-IndicationMessage-Format5-Item.h"
 #include "e2ap_control_response.hpp"
@@ -39,6 +40,7 @@
 #include "subscription_request.hpp"
 #include "subscription_response.hpp"
 #include "subs_mgmt.hpp"
+#include "xapp_rmr.hpp"
 
 #define MAX_RMR_RECV_SIZE 2<<15
 
@@ -48,10 +50,11 @@ private:
 	std::string xapp_id;
 	SubscriptionHandler *_ref_sub_handler;
 	A1Handler *_ref_a1_handler;
+	XappRmr *_ref_rmr;
 public:
 	//constructor for xapp_id.
 	 XappMsgHandler(std::string xid){xapp_id=xid; _ref_sub_handler=NULL;};
-	 XappMsgHandler(std::string xid, SubscriptionHandler &subhandler, A1Handler &a1handler){xapp_id=xid; _ref_sub_handler=&subhandler; _ref_a1_handler=&a1handler;};
+	 XappMsgHandler(std::string xid, SubscriptionHandler &subhandler, A1Handler &a1handler, XappRmr &rmr){xapp_id=xid; _ref_sub_handler=&subhandler; _ref_a1_handler=&a1handler; _ref_rmr=&rmr;};
 
 	 void operator() (rmr_mbuf_t *, bool*);
 

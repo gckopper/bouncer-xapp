@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
 	std::string  port = config[XappSettings::SettingName::BOUNCER_PORT];
 
 	//initialize rmr
-	std::unique_ptr<XappRmr> rmr = std::make_unique<XappRmr>(port);
+	std::shared_ptr<XappRmr> rmr = std::make_shared<XappRmr>(port);
 	rmr->xapp_rmr_init(true);
 
 
@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
-	std::unique_ptr<XappMsgHandler> mp_handler = std::make_unique<XappMsgHandler>(config[XappSettings::SettingName::XAPP_ID], sub_handler, std::ref(*a1handler));
+	std::unique_ptr<XappMsgHandler> mp_handler = std::make_unique<XappMsgHandler>(config[XappSettings::SettingName::XAPP_ID], sub_handler, std::ref(*a1handler), std::ref(*rmr));
 
 	b_xapp->start_xapp_receiver(std::ref(*mp_handler), num_threads);
 

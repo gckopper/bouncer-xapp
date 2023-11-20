@@ -141,33 +141,71 @@ bool e2sm_subscription::set_fields(E2SM_KPM_EventTriggerDefinition_t *trigger_de
 
 bool e2sm_subscription::set_fields(E2SM_KPM_ActionDefinition_t *action_def, e2sm_kpm_subscription_helper& helper) {
   if(action_def == NULL){
-    error_string = "Invalid reference for KPM Event Trigger Definition set fields";
+    error_string = "Invalid reference for KPM Action Definition set fields";
     return false;
   }
 
-  // RICactionDefinition Style 1
-	action_def->ric_Style_Type = 1;
-	action_def->actionDefinition_formats.present = E2SM_KPM_ActionDefinition__actionDefinition_formats_PR_actionDefinition_Format1;
-	action_def->actionDefinition_formats.choice.actionDefinition_Format1 = (E2SM_KPM_ActionDefinition_Format1_t *) calloc(1, sizeof(E2SM_KPM_ActionDefinition_Format1_t));
+  E2SM_KPM_ActionDefinition_Format1_t *actdef_fmt1;
+  if (helper.action.format == E2SM_KPM_ActionDefinition__actionDefinition_formats_PR_actionDefinition_Format1) {
+    // ActionDefinition Style 1
+    action_def->ric_Style_Type = 1;
+    action_def->actionDefinition_formats.present = E2SM_KPM_ActionDefinition__actionDefinition_formats_PR_actionDefinition_Format1;
+    action_def->actionDefinition_formats.choice.actionDefinition_Format1 = (E2SM_KPM_ActionDefinition_Format1_t *) calloc(1, sizeof(E2SM_KPM_ActionDefinition_Format1_t));
 
-	// ActionDefinition_Format1 (Subscription Information)
-	E2SM_KPM_ActionDefinition_Format1_t *actdef_fmt1 = action_def->actionDefinition_formats.choice.actionDefinition_Format1;
+    actdef_fmt1 = action_def->actionDefinition_formats.choice.actionDefinition_Format1;
+
+  } else if (helper.action.format == E2SM_KPM_ActionDefinition__actionDefinition_formats_PR_actionDefinition_Format4) {
+    // ActionDefinition Style 4
+    action_def->ric_Style_Type = 4;
+    action_def->actionDefinition_formats.present = E2SM_KPM_ActionDefinition__actionDefinition_formats_PR_actionDefinition_Format4;
+    action_def->actionDefinition_formats.choice.actionDefinition_Format4 = (E2SM_KPM_ActionDefinition_Format4_t *) calloc(1, sizeof(E2SM_KPM_ActionDefinition_Format4_t));
+
+    actdef_fmt1 = &action_def->actionDefinition_formats.choice.actionDefinition_Format4->subscriptionInfo;
+
+    // Matching Condition
+    MatchingUeCondPerSubItem_t *match = (MatchingUeCondPerSubItem_t *) calloc(1, sizeof(MatchingUeCondPerSubItem_t));
+    match->testCondInfo.testType.present = TestCond_Type_PR_rSRP;
+    match->testCondInfo.testType.choice.rSRP = TestCond_Type__rSRP_true;
+    // match->testCondInfo.testType.present = TestCond_Type_PR_fiveQI;
+    // match->testCondInfo.testType.choice.sNSSAI = TestCond_Type__fiveQI_true;
+
+    match->testCondInfo.testExpr = (TestCond_Expression_t *) calloc(1, sizeof(TestCond_Expression_t));
+    *match->testCondInfo.testExpr = TestCond_Expression_present;
+    // *match->testCondInfo.testExpr = TestCond_Expression_greaterthan;
+
+    match->testCondInfo.testValue = (struct TestCond_Value *) calloc(1, sizeof(struct TestCond_Value));
+    match->testCondInfo.testValue->present = TestCond_Value_PR_valueBool;
+    match->testCondInfo.testValue->choice.valueBool = 1;
+    // match->testCondInfo.testValue->present = TestCond_Value_PR_valueInt;
+    // match->testCondInfo.testValue->choice.valueInt = 0;
+
+    // match->logicalOR = (LogicalOR_t *) calloc(1, sizeof(LogicalOR_t));
+    // *match->logicalOR = LogicalOR_true;
+
+
+    ASN_SEQUENCE_ADD(&action_def->actionDefinition_formats.choice.actionDefinition_Format4->matchingUeCondList.list, match);
+
+  } else {
+    error_string = "Only ActionDefinition formats 1 and 4 are supported.";
+    return false;
+  }
+
 	actdef_fmt1->granulPeriod = helper.action.granulPeriod;
 
-	// RSRP Measurement
+	// Measurements
   std::vector<std::string> measurements = {"RSRP", "RSRQ", "CQI", "DRB.RlcPacketDropRateDl", "DRB.RlcSduTransmittedVolumeDL", "DRB.RlcSduTransmittedVolumeUL"};
   for (std::string meas : measurements) {
-    MeasurementInfoItem_t *minfo_1 = (MeasurementInfoItem_t *) calloc(1, sizeof(MeasurementInfoItem_t));
-    minfo_1->measType.present = MeasurementType_PR_measName;
-    // OCTET_STRING_t *meas_name_1 = OCTET_STRING_new_fromBuf(&asn_DEF_MeasurementTypeName, "RSRP", 4);
-    OCTET_STRING_t *meas_name_1 = OCTET_STRING_new_fromBuf(&asn_DEF_MeasurementTypeName, meas.c_str(), meas.length());
-    memcpy(&minfo_1->measType.choice.measName, meas_name_1, sizeof(OCTET_STRING_t));
-    free(meas_name_1);
-    LabelInfoItem_t *linfo_1 = (LabelInfoItem_t *) calloc(1, sizeof(LabelInfoItem_t));
-    linfo_1->measLabel.noLabel = (long *) calloc(1, sizeof(long));
-    ASN_SEQUENCE_ADD(&minfo_1->labelInfoList.list, linfo_1);
+    MeasurementInfoItem_t *minfo = (MeasurementInfoItem_t *) calloc(1, sizeof(MeasurementInfoItem_t));
+    minfo->measType.present = MeasurementType_PR_measName;
+    // OCTET_STRING_t *meas_name = OCTET_STRING_new_fromBuf(&asn_DEF_MeasurementTypeName, "RSRP", 4);
+    OCTET_STRING_t *meas_name = OCTET_STRING_new_fromBuf(&asn_DEF_MeasurementTypeName, meas.c_str(), meas.length());
+    memcpy(&minfo->measType.choice.measName, meas_name, sizeof(OCTET_STRING_t));
+    free(meas_name);
+    LabelInfoItem_t *linfo = (LabelInfoItem_t *) calloc(1, sizeof(LabelInfoItem_t));
+    linfo->measLabel.noLabel = (long *) calloc(1, sizeof(long));
+    ASN_SEQUENCE_ADD(&minfo->labelInfoList.list, linfo);
 
-    ASN_SEQUENCE_ADD(&actdef_fmt1->measInfoList.list, minfo_1);
+    ASN_SEQUENCE_ADD(&actdef_fmt1->measInfoList.list, minfo);
   }
 
   return true;

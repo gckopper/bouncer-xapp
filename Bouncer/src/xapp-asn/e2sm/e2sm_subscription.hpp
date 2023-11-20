@@ -40,6 +40,10 @@
 #include <E2SM-KPM-ActionDefinition-Format1.h>
 #include <MeasurementInfoItem.h>
 #include <LabelInfoItem.h>
+#include <E2SM-KPM-ActionDefinition-Format4.h>
+#include <MatchingUeCondPerSubItem.h>
+#include <TestCond-Expression.h>
+#include <TestCond-Value.h>
 
 #include "e2sm_helpers.hpp"
 

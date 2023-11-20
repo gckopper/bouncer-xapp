@@ -29,6 +29,7 @@ extern "C" {
 	#include "E2SM-RC-ControlMessage.h"
 	#include "RICindicationHeader.h"
 	#include "UEID.h"
+	#include "E2SM-KPM-ActionDefinition.h"
 }
 
 typedef struct e2sm_kpm_subscription_helper {
@@ -37,6 +38,7 @@ typedef struct e2sm_kpm_subscription_helper {
 	} trigger;
 	struct {
 		unsigned long granulPeriod;
+		E2SM_KPM_ActionDefinition__actionDefinition_formats_PR format;
 	} action;
 } e2sm_kpm_subscription_helper;
 
@@ -61,10 +63,22 @@ typedef struct e2sm_indication_helper {
 	size_t message_len;
 } e2sm_control_helper;
 
+typedef enum e2sm_rc_control_action_PR {
+	CONTROL_ACTION_PR_UE_ADMISSION_CONTROL,
+	CONTROL_ACTION_PR_SLICE_LEVEL_PRB_QUOTA
+} e2sm_rc_control_action_PR;
+
+typedef struct e2sm_rc_slice_level_prb_quota_helper {
+	long max_prb;
+	long min_prb;
+} e2sm_rc_slice_level_prb_quota_helper;
+
 typedef struct e2sm_rc_control_helper {
-	E2SM_RC_ControlHeader_t *header;
-	E2SM_RC_ControlMessage_t *message;
-	UEID_t *ueid;
+	e2sm_rc_control_action_PR present;
+	union control_action_u {
+		e2sm_rc_slice_level_prb_quota_helper *prb_quota_helper;
+		/* This type is extensible */
+	} choice;
 } e2sm_rc_control_helper;
 
 class RCIndicationlHelper {

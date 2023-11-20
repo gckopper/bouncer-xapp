@@ -80,7 +80,6 @@ bool XappMsgHandler::decode_subscription_response(unsigned char* data_buf, size_
 }
 
 bool XappMsgHandler::a1_policy_handler(char *message, int *message_len, a1_policy_helper &helper) {
-
 	if (! _ref_a1_handler->parse_a1_policy(message, helper)) {
 		mdclog_write(MDCLOG_ERR, "Unable to process A1 policy request. Reason: %s", _ref_a1_handler->error_string.c_str());
 		return false;
@@ -94,17 +93,96 @@ bool XappMsgHandler::a1_policy_handler(char *message, int *message_len, a1_polic
 			}
 
 			std::stringstream ss;
-			for (std::shared_ptr<ue_rc_helper> ue : helper.ue_list) {
+			for (std::shared_ptr<ue_rc_helper> ue : helper.ue_list) {	// getting the policy payload for logging
 				ss << "{ue_index:" << ue->ue_index << ", max_prb:" << ue->max_prb << "},";
 			}
-
-			// TODO implement policy enforcement logic here
 			mdclog_write(MDCLOG_INFO, "A1 policy request: handler_id=%s, operation=%s, policy_type_id=%s, policy_instance_id=%s, ues=%s",
 						helper.handler_id.c_str(),
 						helper.operation.c_str(),
 						helper.policy_type_id.c_str(),
 						helper.policy_instance_id.c_str(),
 						ss.str().c_str());
+
+			// TODO implement policy enforcement logic here
+			e2sm_rc_control_helper control_helper;
+			e2sm_rc_slice_level_prb_quota_helper quota_helper;
+			control_helper.present = CONTROL_ACTION_PR_SLICE_LEVEL_PRB_QUOTA;
+			control_helper.choice.prb_quota_helper = &quota_helper;
+
+			e2sm_control control;
+			for (std::shared_ptr<ue_rc_helper> ue : helper.ue_list) {	// getting the policy payload for logging
+				mdclog_write(MDCLOG_INFO, "Aplying policy enforcement for %s {ue_index: %d, max_prb: %d",
+						"???? meid ????", ue->ue_index, ue->max_prb);
+
+				quota_helper.max_prb = ue->max_prb;
+				quota_helper.min_prb = 1;	// dummy value as policy does not define any value here; // FIXME check if we do not need to send to srsRAN
+
+				uint8_t ctrl_header_buf[8192] = {0, };
+				ssize_t ctrl_header_buf_size = 8192;
+
+				bool ret_head = control.encode_rc_control_header(ctrl_header_buf, &ctrl_header_buf_size, CONTROL_ACTION_PR_SLICE_LEVEL_PRB_QUOTA);
+				if (!ret_head) {
+					mdclog_write(MDCLOG_ERR, "Unable do encode RC control header in %s. Reason: %s", __func__, control.get_error().c_str());
+					return false;
+				}
+
+				uint8_t ctrl_msg_buf[8192] = {0, };
+				ssize_t ctrl_msg_buf_size = 8192;
+
+				bool ret_msg = control.encode_rc_control_message(ctrl_msg_buf, &ctrl_msg_buf_size, &control_helper);
+				if (!ret_msg) {
+					mdclog_write(MDCLOG_ERR, "Unable do encode RC control message in %s. Reason: %s", __func__, control.get_error().c_str());
+					return false;
+				}
+
+				// E2AP Control Helper
+				ric_control_helper ric_control_helper;
+				ric_control_helper.requestor_id = 123;	// dummy
+				ric_control_helper.instance_id = 1;		// dummy
+				ric_control_helper.func_id = 148;
+				// Control Call Process ID
+				ric_control_helper.call_process_id_size = 0;	// there is generated as response for a ric indication insert
+				ric_control_helper.call_process_id = NULL;
+				// Control ACK
+				ric_control_helper.control_ack = RICcontrolAckRequest_noAck; // for now we do not require ACK messages for control requests
+				// Control Header
+				ric_control_helper.control_header = ctrl_header_buf;
+				ric_control_helper.control_header_size = ctrl_header_buf_size;
+				// Control Message
+				ric_control_helper.control_msg = ctrl_msg_buf;
+				ric_control_helper.control_msg_size = ctrl_msg_buf_size;
+
+				// E2AP buffer
+				uint8_t e2ap_buf[8192] = {0, };
+				ssize_t e2ap_buf_size = 8192;
+
+				ric_control_request control_req;
+				bool encoded = control_req.encode_e2ap_control_request(e2ap_buf, &e2ap_buf_size, ric_control_helper);
+				if (encoded) {
+					xapp_rmr_header header;
+					header.state = RMR_OK;
+					header.payload_length = e2ap_buf_size;
+					header.message_type = RIC_CONTROL_REQ;
+
+					strncpy((char *)header.meid, "gnb_001_001_0000019b", RMR_MAX_MEID);	// FIXME this should come from the RAN or cmd input args
+
+					unsigned char *message = (unsigned char *)calloc(e2ap_buf_size, sizeof(unsigned char));
+					memcpy(message, e2ap_buf, e2ap_buf_size);
+
+					mdclog_write(MDCLOG_INFO, "Sending control request to %s", header.meid); // FIXME put the correct name
+
+					bool sent = _ref_rmr->xapp_rmr_send(&header, (void *)message);
+					free(message);
+					if (!sent) {
+						mdclog_write(MDCLOG_ERR, "Unable to send control request to %s", header.meid); // FIXME put the correct name
+						return false;
+					}
+
+				} else {
+					mdclog_write(MDCLOG_ERR, "E2AP Control Request encoding error. Reason = %s", control_req.get_error().c_str());
+					return false;
+				}
+			}
 
 			helper.status = "OK";
 
@@ -259,7 +337,7 @@ void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
 
 
 
-			// TODO ######## this is specific for E2SM-RC
+			// TODO ######## this is specific for E2SM-RC with UE Admission Control
 			// uint8_t ctrl_header_buf[8192] = {0, };
 			// ssize_t ctrl_header_buf_size = 8192;
 
@@ -277,7 +355,9 @@ void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
 			// uint8_t ctrl_msg_buf[8192] = {0, };
 			// ssize_t ctrl_msg_buf_size = 8192;
 
-			// bool ret_msg = e2sm_control.encode_rc_control_message(ctrl_msg_buf, &ctrl_msg_buf_size);
+			// e2sm_rc_control_helper control_msg_helper;
+			// control_msg_helper.present = CONTROL_ACTION_PR_UE_ADMISSION_CONTROL;
+			// bool ret_msg = e2sm_control.encode_rc_control_message(ctrl_msg_buf, &ctrl_msg_buf_size, &control_msg_helper);
 			// if (!ret_msg) {
 			// 	mdclog_write(MDCLOG_ERR, "%s", e2sm_control.get_error().c_str());
 			// 	*resend = false;
@@ -331,7 +411,7 @@ void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
 			// 	mdclog_write(MDCLOG_ERR, "E2AP Control Request encoding error. Reason = %s", control_req.get_error().c_str());
 			// 	*resend = false;
 			// }
-			// TODO ######## end of specific for E2SM-RC
+			// TODO ######## end of specific for E2SM-RC with UE Admission Control
 
 
 			if (mdclog_level_get() > MDCLOG_INFO)

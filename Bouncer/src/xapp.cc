@@ -288,6 +288,8 @@ jsonn Xapp::build_kpm_subscription_request(string meid) {
 	helper.trigger.reportingPeriod = 5;	// TODO (should be each 500ms) could be changed via ENV (seems that srsRAN hardcoded it to 1)
 	helper.action.granulPeriod = 3;  // TODO could be changed via ENV (seems that srsRAN hardcoded it to 1)
 
+	helper.action.format = E2SM_KPM_ActionDefinition__actionDefinition_formats_PR_actionDefinition_Format4;
+
 	e2sm_subscription kpm_sub;
 
 	unsigned char buf[4096];

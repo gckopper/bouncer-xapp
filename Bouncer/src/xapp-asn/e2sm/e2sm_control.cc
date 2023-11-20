@@ -24,9 +24,12 @@
 #include "E2SM-RC-ControlMessage-Format1-Item.h"
 #include "RANParameter-ValueType-Choice-Structure.h"
 #include "RANParameter-ValueType-Choice-ElementFalse.h"
+#include "RANParameter-ValueType-Choice-ElementTrue.h"
+#include "RANParameter-ValueType-Choice-List.h"
 #include "RANParameter-STRUCTURE.h"
 #include "RANParameter-STRUCTURE-Item.h"
 #include "RANParameter-Value.h"
+#include "RANParameter-LIST.h"
 #include "NR-CGI.h"
 #include "UEID-GNB.h"
 
@@ -52,8 +55,8 @@
 
 };
 
-bool e2sm_control::encode_rc_control_header(unsigned char *buf, ssize_t *size, UEID_t *ueid) {
-  bool res = set_fields(rc_control_header, ueid);
+bool e2sm_control::encode_rc_control_header(unsigned char *buf, ssize_t *size, e2sm_rc_control_action_PR action) {
+  bool res = set_fields(rc_control_header, action);
   if (!res){
     return false;
   }
@@ -65,7 +68,7 @@ bool e2sm_control::encode_rc_control_header(unsigned char *buf, ssize_t *size, U
   }
 
   if (mdclog_level_get() > MDCLOG_INFO) {
-    xer_fprint(stderr, &asn_DEF_E2SM_RC_ControlHeader, rc_control_header);
+    asn_fprint(stderr, &asn_DEF_E2SM_RC_ControlHeader, rc_control_header);
   }
 
   asn_enc_rval_t retval = asn_encode_to_buffer(0, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2SM_RC_ControlHeader, rc_control_header, buf, *size);
@@ -87,23 +90,40 @@ bool e2sm_control::encode_rc_control_header(unsigned char *buf, ssize_t *size, U
   return true;
 }
 
-bool e2sm_control::encode_rc_control_message(unsigned char *buf, ssize_t *size) {
-  bool res;
-  res = set_fields(rc_control_msg);
-  if (!res){
+bool e2sm_control::encode_rc_control_message(unsigned char *buf, ssize_t *size, e2sm_rc_control_helper *helper) {
+  if (helper == NULL){
+    error_string = std::string("Invalid reference for e2sm_rc_control_helper in ") + __func__;
     return false;
   }
 
-  // int ret_constr = asn_check_constraints(&asn_DEF_E2SM_RC_ControlMessage, rc_control_msg, errbuf, &errbuf_len);
-  // if(ret_constr){
-  //   error_string.assign(&errbuf[0], errbuf_len);
-  //   return false;
-  // }
+  switch (helper->present) {
+    case CONTROL_ACTION_PR_UE_ADMISSION_CONTROL:
+      if (! set_fields(rc_control_msg)) {
+        return false;
+      }
+      break;
+
+    case CONTROL_ACTION_PR_SLICE_LEVEL_PRB_QUOTA:
+      if (! set_fields(rc_control_msg, helper->choice.prb_quota_helper)) {
+        return false;
+      }
+      break;
+
+    default:
+      error_string = std::string("Control Action not supported in ") + __func__;
+      return false;
+  }
+
+  int ret_constr = asn_check_constraints(&asn_DEF_E2SM_RC_ControlMessage, rc_control_msg, errbuf, &errbuf_len);
+  if(ret_constr){
+    error_string.assign(&errbuf[0], errbuf_len);
+    return false;
+  }
 
   asn_enc_rval_t retval = asn_encode_to_buffer(0, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2SM_RC_ControlMessage, rc_control_msg, buf, *size);
 
   if(mdclog_level_get() > MDCLOG_INFO) {
-    xer_fprint(stderr, &asn_DEF_E2SM_RC_ControlMessage, rc_control_msg);
+    asn_fprint(stderr, &asn_DEF_E2SM_RC_ControlMessage, rc_control_msg);
   }
 
   if(retval.encoded == -1){
@@ -112,7 +132,7 @@ bool e2sm_control::encode_rc_control_message(unsigned char *buf, ssize_t *size) 
   }
   else if (retval.encoded > *size){
     std::stringstream ss;
-    ss  <<"Error encoding E2SM_RC_ControlMessage. Reason =  encoded pdu size " << retval.encoded << " exceeds buffer size " << *size << std::endl;
+    ss  << "Error encoding E2SM_RC_ControlMessage. Reason = encoded pdu size " << retval.encoded << " exceeds buffer size " << *size << std::endl;
     error_string = ss.str();
     return false;
   }
@@ -123,7 +143,7 @@ bool e2sm_control::encode_rc_control_message(unsigned char *buf, ssize_t *size) 
   return true;
 }
 
-bool e2sm_control::set_fields(E2SM_RC_ControlHeader_t *control_header, UEID_t *ueid) {
+bool e2sm_control::set_fields(E2SM_RC_ControlHeader_t *control_header, e2sm_rc_control_action_PR action) {
   if(control_header == 0){
     error_string = "Invalid reference for E2SM_RC_ControlHeader set fields";
     return false;
@@ -131,7 +151,22 @@ bool e2sm_control::set_fields(E2SM_RC_ControlHeader_t *control_header, UEID_t *u
 
   ASN_STRUCT_RESET(asn_DEF_E2SM_RC_ControlHeader, control_header);
 
-  E2SM_RC_ControlHeader_Format1_t *ctrlhead_fmt1 = generate_e2sm_rc_control_header_format1(ueid);
+  E2SM_RC_ControlHeader_Format1_t *ctrlhead_fmt1;
+
+  switch (action) {
+    case CONTROL_ACTION_PR_UE_ADMISSION_CONTROL:
+      ctrlhead_fmt1 = generate_e2sm_ue_admission_control_header();
+      break;
+
+    case CONTROL_ACTION_PR_SLICE_LEVEL_PRB_QUOTA:
+      ctrlhead_fmt1 = generate_e2sm_slice_level_prb_quota_header();
+      break;
+
+    default:
+      error_string = std::string("Control action ") + std::to_string(action) + " not supported in " + __func__;
+      return false;
+  }
+
   if(ctrlhead_fmt1 == NULL) {
     return false; // error string is set on called function
   }
@@ -150,7 +185,7 @@ bool e2sm_control::set_fields(E2SM_RC_ControlMessage_t *control_msg) {
 
   ASN_STRUCT_RESET(asn_DEF_E2SM_RC_ControlMessage, rc_control_msg);
 
-  E2SM_RC_ControlMessage_Format1_t *ctrlmsg_fmt1 = generate_e2sm_rc_control_msg_format1();
+  E2SM_RC_ControlMessage_Format1_t *ctrlmsg_fmt1 = generate_e2sm_ue_admission_control_msg();
   if(ctrlmsg_fmt1 == NULL) {
     return false; // error string is set on called function
   }
@@ -161,11 +196,30 @@ bool e2sm_control::set_fields(E2SM_RC_ControlMessage_t *control_msg) {
   return true;
 }
 
-E2SM_RC_ControlHeader_Format1_t *e2sm_control::generate_e2sm_rc_control_header_format1(UEID_t *ueid) {
+bool e2sm_control::set_fields(E2SM_RC_ControlMessage_t *control_msg, e2sm_rc_slice_level_prb_quota_helper *helper) {
+  if(control_msg == 0){
+    error_string = "Invalid reference for E2SM_RC_ControlMessage set fields";
+    return false;
+  }
+
+  ASN_STRUCT_RESET(asn_DEF_E2SM_RC_ControlMessage, rc_control_msg);
+
+  E2SM_RC_ControlMessage_Format1_t *ctrlmsg_fmt1 = generate_e2sm_slice_level_prb_quota_msg(helper);
+  if(ctrlmsg_fmt1 == NULL) {
+    return false; // error string is set on called function
+  }
+
+  control_msg->ric_controlMessage_formats.present = E2SM_RC_ControlMessage__ric_controlMessage_formats_PR_controlMessage_Format1;
+  control_msg->ric_controlMessage_formats.choice.controlMessage_Format1 = ctrlmsg_fmt1;
+
+  return true;
+}
+
+E2SM_RC_ControlHeader_Format1_t *e2sm_control::generate_e2sm_ue_admission_control_header() {
   // TODO we should populate this using the corresponding values from indication request
   E2SM_RC_ControlHeader_Format1_t *ctrlhead_fmt1 = (E2SM_RC_ControlHeader_Format1_t *) calloc(1, sizeof(E2SM_RC_ControlHeader_Format1_t));
   if(ctrlhead_fmt1 == NULL) {
-    error_string = "unable to alloc E2SM_RC_ControlHeader_Format1 for generating control header";
+    error_string = std::string("Unable to alloc E2SM_RC_ControlHeader_Format1 for generating control header in ") + __func__;
     return NULL;
   }
   generate_e2sm_rc_ueid(&ctrlhead_fmt1->ueID);  // TODO this should be the corresponding UE from insert message
@@ -178,6 +232,20 @@ E2SM_RC_ControlHeader_Format1_t *e2sm_control::generate_e2sm_rc_control_header_f
     return NULL;
   }
   *ctrlhead_fmt1->ric_ControlDecision = E2SM_RC_ControlHeader_Format1__ric_ControlDecision_accept;  // for now we accept all insert requests
+
+  return ctrlhead_fmt1;
+}
+
+E2SM_RC_ControlHeader_Format1_t *e2sm_control::generate_e2sm_slice_level_prb_quota_header() {
+  E2SM_RC_ControlHeader_Format1_t *ctrlhead_fmt1 = (E2SM_RC_ControlHeader_Format1_t *) calloc(1, sizeof(E2SM_RC_ControlHeader_Format1_t));
+  if(ctrlhead_fmt1 == NULL) {
+    error_string = std::string("Unable to alloc E2SM_RC_ControlHeader_Format1 for generating control header in ") + __func__;
+    return NULL;
+  }
+  generate_e2sm_rc_ueid(&ctrlhead_fmt1->ueID);  // TODO this should be the corresponding UE from insert message
+  ctrlhead_fmt1->ric_Style_Type = 2; // Radio Resource Allocation Control
+  ctrlhead_fmt1->ric_ControlAction_ID = 6; // Slice-level PRB quota
+  ctrlhead_fmt1->ric_ControlDecision = NULL;
 
   return ctrlhead_fmt1;
 }
@@ -215,10 +283,10 @@ void e2sm_control::generate_e2sm_rc_ueid(UEID_t *ueid) {
   ueid->present = UEID_PR_gNB_UEID;
 }
 
-E2SM_RC_ControlMessage_Format1_t *e2sm_control::generate_e2sm_rc_control_msg_format1() {
+E2SM_RC_ControlMessage_Format1_t *e2sm_control::generate_e2sm_ue_admission_control_msg() {
   E2SM_RC_ControlMessage_Format1_t *ctrlmsg_fmt1 = (E2SM_RC_ControlMessage_Format1_t *) calloc(1, sizeof(E2SM_RC_ControlMessage_Format1_t));
   if(ctrlmsg_fmt1 == NULL) {
-    error_string = "unable to alloc E2SM_RC_ControlMessage_Format1 for generating control message";
+    error_string = "unable to alloc E2SM_RC_ControlMessage_Format1 for generating admission control message";
     return NULL;
   }
 
@@ -289,6 +357,88 @@ E2SM_RC_ControlMessage_Format1_t *e2sm_control::generate_e2sm_rc_control_msg_for
   }
   ranp_struct_item4->ranParameter_valueType->choice.ranP_Choice_ElementFalse->ranParameter_value->choice.valueOctS = *nr_cgi;
   free(nr_cgi);
+
+  return ctrlmsg_fmt1;
+}
+
+E2SM_RC_ControlMessage_Format1_t *e2sm_control::generate_e2sm_slice_level_prb_quota_msg(e2sm_rc_slice_level_prb_quota_helper *helper) {
+  E2SM_RC_ControlMessage_Format1_t *ctrlmsg_fmt1 = (E2SM_RC_ControlMessage_Format1_t *) calloc(1, sizeof(E2SM_RC_ControlMessage_Format1_t));
+  if(ctrlmsg_fmt1 == NULL) {
+    error_string = "unable to alloc E2SM_RC_ControlMessage_Format1 for generating slice level PRB quota control message";
+    return NULL;
+  }
+
+  // NEW control message implementation
+  // E2SM_RC_ControlMessage_Format1_Item_t *param1 = (E2SM_RC_ControlMessage_Format1_Item_t *) calloc(1, sizeof(E2SM_RC_ControlMessage_Format1_Item_t));
+  // ASN_SEQUENCE_ADD(&ctrlmsg_fmt1->ranP_List.list, param1);
+  // param1->ranParameter_ID = 1; // RRM Policy Ratio List as in E2SM-RC-R003-v03.00 section 8.4.3.6
+  // param1->ranParameter_valueType.present = RANParameter_ValueType_PR_ranP_Choice_List;
+  // param1->ranParameter_valueType.choice.ranP_Choice_List =
+  //     (RANParameter_ValueType_Choice_List_t *) calloc(1, sizeof(RANParameter_ValueType_Choice_List_t));
+  // param1->ranParameter_valueType.choice.ranP_Choice_List->ranParameter_List =
+  //     (RANParameter_LIST_t *) calloc(1, sizeof(RANParameter_LIST_t));
+
+  // RANParameter_STRUCTURE_t *param2 = (RANParameter_STRUCTURE_t *) calloc(1, sizeof(RANParameter_STRUCTURE_t));
+  // ASN_SEQUENCE_ADD(&param1->ranParameter_valueType.choice.ranP_Choice_List->ranParameter_List->list_of_ranParameter.list, param2);
+
+  // param2->sequence_of_ranParameters = (struct RANParameter_STRUCTURE::RANParameter_STRUCTURE__sequence_of_ranParameters *) calloc(1, sizeof(struct RANParameter_STRUCTURE::RANParameter_STRUCTURE__sequence_of_ranParameters));
+
+  // RANParameter_STRUCTURE_Item_t *param2_item = (RANParameter_STRUCTURE_Item_t *) calloc(1, sizeof(RANParameter_STRUCTURE_Item_t));
+  // ASN_SEQUENCE_ADD(&param2->sequence_of_ranParameters->list, param2_item);
+  // param2_item->ranParameter_ID = 2; // RRM Policy Ratio Group as in E2SM-RC-R003-v03.00 section 8.4.3.6
+  // param2_item->ranParameter_valueType = (RANParameter_ValueType_t *) calloc(1, sizeof(RANParameter_ValueType_t));
+  // param2_item->ranParameter_valueType->present = RANParameter_ValueType_PR_ranP_Choice_Structure;
+
+  // param2_item->ranParameter_valueType->choice.ranP_Choice_Structure =
+  //     (RANParameter_ValueType_Choice_Structure_t *) calloc(1, sizeof(RANParameter_ValueType_Choice_Structure_t));
+  // RANParameter_ValueType_Choice_Structure_t *param2_item_value = param2_item->ranParameter_valueType->choice.ranP_Choice_Structure;
+  // param2_item_value->ranParameter_Structure = (RANParameter_STRUCTURE_t *) calloc(1, sizeof(RANParameter_STRUCTURE_t));
+
+  // param2_item_value->ranParameter_Structure->sequence_of_ranParameters= (struct RANParameter_STRUCTURE::RANParameter_STRUCTURE__sequence_of_ranParameters *) calloc(1, sizeof(struct RANParameter_STRUCTURE::RANParameter_STRUCTURE__sequence_of_ranParameters));
+
+  // RANParameter_STRUCTURE_Item_t *param12 = (RANParameter_STRUCTURE_Item_t *) calloc(1, sizeof(RANParameter_STRUCTURE_Item_t));
+  // ASN_SEQUENCE_ADD(&param2_item_value->ranParameter_Structure->sequence_of_ranParameters->list, param12);
+  // param12->ranParameter_ID = 12; // Max PRB Policy Ratio as in E2SM-RC-R003-v03.00 section 8.4.3.6
+  // param12->ranParameter_valueType = (RANParameter_ValueType_t *) calloc(1, sizeof(RANParameter_ValueType_t));
+  // param12->ranParameter_valueType->present = RANParameter_ValueType_PR_ranP_Choice_ElementFalse;
+  // param12->ranParameter_valueType->choice.ranP_Choice_ElementFalse =
+  //     (RANParameter_ValueType_Choice_ElementFalse_t *) calloc(1, sizeof(RANParameter_ValueType_Choice_ElementFalse_t));
+  // param12->ranParameter_valueType->choice.ranP_Choice_ElementFalse->ranParameter_value = (RANParameter_Value_t *) calloc(1, sizeof(RANParameter_Value_t));
+  // param12->ranParameter_valueType->choice.ranP_Choice_ElementFalse->ranParameter_value->present = RANParameter_Value_PR_valueInt;
+  // param12->ranParameter_valueType->choice.ranP_Choice_ElementFalse->ranParameter_value->choice.valueInt = helper->max_prb;
+
+  // RANParameter_STRUCTURE_Item_t *param13 = (RANParameter_STRUCTURE_Item_t *) calloc(1, sizeof(RANParameter_STRUCTURE_Item_t));
+  // ASN_SEQUENCE_ADD(&param2_item_value->ranParameter_Structure->sequence_of_ranParameters->list, param13);
+  // param13->ranParameter_ID = 13; // Dedicated PRB Policy Ratio as in E2SM-RC-R003-v03.00 section 8.4.3.6
+  // param13->ranParameter_valueType = (RANParameter_ValueType_t *) calloc(1, sizeof(RANParameter_ValueType_t));
+  // param13->ranParameter_valueType->present = RANParameter_ValueType_PR_ranP_Choice_ElementFalse;
+  // param13->ranParameter_valueType->choice.ranP_Choice_ElementFalse =
+  //     (RANParameter_ValueType_Choice_ElementFalse_t *) calloc(1, sizeof(RANParameter_ValueType_Choice_ElementFalse_t));
+  // param13->ranParameter_valueType->choice.ranP_Choice_ElementFalse->ranParameter_value = (RANParameter_Value_t *) calloc(1, sizeof(RANParameter_Value_t));
+  // param13->ranParameter_valueType->choice.ranP_Choice_ElementFalse->ranParameter_value->present = RANParameter_Value_PR_valueInt;
+  // param13->ranParameter_valueType->choice.ranP_Choice_ElementFalse->ranParameter_value->choice.valueInt = helper->min_prb;
+  // end of NEW control message implementation
+
+  // OLD control message implementation
+  E2SM_RC_ControlMessage_Format1_Item_t *format_item = (E2SM_RC_ControlMessage_Format1_Item_t *) calloc(1, sizeof(E2SM_RC_ControlMessage_Format1_Item_t));
+  format_item->ranParameter_ID = 12; // Max PRB Policy Ratio as in E2SM-RC-R003-v03.00 section 8.4.3.6
+  format_item->ranParameter_valueType.present = RANParameter_ValueType_PR_ranP_Choice_ElementTrue;
+  format_item->ranParameter_valueType.choice.ranP_Choice_ElementTrue =
+      (RANParameter_ValueType_Choice_ElementTrue_t *) calloc(1, sizeof(RANParameter_ValueType_Choice_ElementTrue_t)); // E2SM-RC spec is False, but srsRAN expects True.
+  // format_item->ranParameter_valueType.choice.ranP_Choice_ElementFalse->ranParameter_value = (RANParameter_Value_t *) calloc(1, sizeof(RANParameter_Value_t));
+  format_item->ranParameter_valueType.choice.ranP_Choice_ElementTrue->ranParameter_value.present = RANParameter_Value_PR_valueInt;
+  format_item->ranParameter_valueType.choice.ranP_Choice_ElementTrue->ranParameter_value.choice.valueInt = helper->max_prb;
+  ASN_SEQUENCE_ADD(&ctrlmsg_fmt1->ranP_List.list, format_item);
+
+  E2SM_RC_ControlMessage_Format1_Item_t *format_item2 = (E2SM_RC_ControlMessage_Format1_Item_t *) calloc(1, sizeof(E2SM_RC_ControlMessage_Format1_Item_t));
+  format_item2->ranParameter_ID = 13; // Dedicated PRB Policy Ratio as in E2SM-RC-R003-v03.00 section 8.4.3.6
+  format_item2->ranParameter_valueType.present = RANParameter_ValueType_PR_ranP_Choice_ElementTrue;
+  format_item2->ranParameter_valueType.choice.ranP_Choice_ElementTrue =
+      (RANParameter_ValueType_Choice_ElementTrue_t *) calloc(1, sizeof(RANParameter_ValueType_Choice_ElementTrue_t)); // E2SM-RC spec is False, but srsRAN expects True.
+  // format_item2->ranParameter_valueType.choice.ranP_Choice_ElementFalse->ranParameter_value = (RANParameter_Value_t *) calloc(1, sizeof(RANParameter_Value_t));
+  format_item2->ranParameter_valueType.choice.ranP_Choice_ElementTrue->ranParameter_value.present = RANParameter_Value_PR_valueInt;
+  format_item2->ranParameter_valueType.choice.ranP_Choice_ElementTrue->ranParameter_value.choice.valueInt = helper->min_prb;
+  ASN_SEQUENCE_ADD(&ctrlmsg_fmt1->ranP_List.list, format_item2);
 
   return ctrlmsg_fmt1;
 }

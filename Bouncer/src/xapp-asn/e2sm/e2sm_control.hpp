@@ -40,23 +40,22 @@ public:
 	e2sm_control(void);
   ~e2sm_control(void);
 
-  // E2SM RC
-  bool set_fields(E2SM_RC_ControlHeader_t *control_header, UEID_t *ueid);
-  bool set_fields(E2SM_RC_ControlMessage_t *control_msg);
-
-  // bool get_fields(E2SM_RC_ControlHeader_t *control_header, e2sm_rc_control_helper &helper);
-  // bool get_fields(E2SM_RC_ControlMessage_t *control_msg, e2sm_rc_control_helper &helper);
-
-  bool encode_rc_control_header(unsigned char *buf, ssize_t *size, UEID_t *ueid);
-  bool encode_rc_control_message(unsigned char *buf, ssize_t *size);
+  bool encode_rc_control_header(unsigned char *buf, ssize_t *size, e2sm_rc_control_action_PR action);
+  bool encode_rc_control_message(unsigned char *buf, ssize_t *size, e2sm_rc_control_helper *helper);
 
   std::string  get_error (void) const {return error_string ;};
 
 private:
-  E2SM_RC_ControlHeader_Format1_t *generate_e2sm_rc_control_header_format1(UEID_t *ueid);
-  E2SM_RC_ControlMessage_Format1_t *generate_e2sm_rc_control_msg_format1();
+  E2SM_RC_ControlHeader_Format1_t *generate_e2sm_ue_admission_control_header();
+  E2SM_RC_ControlHeader_Format1_t *generate_e2sm_slice_level_prb_quota_header();
+  E2SM_RC_ControlMessage_Format1_t *generate_e2sm_ue_admission_control_msg();
+  E2SM_RC_ControlMessage_Format1_t *generate_e2sm_slice_level_prb_quota_msg(e2sm_rc_slice_level_prb_quota_helper *helper);
   OCTET_STRING_t *generate_and_encode_nr_cgi(const char *plmnid, unsigned long nr_cell_id);
   void generate_e2sm_rc_ueid(UEID_t *ueid);
+
+  bool set_fields(E2SM_RC_ControlHeader_t *control_header, e2sm_rc_control_action_PR action);
+  bool set_fields(E2SM_RC_ControlMessage_t *control_msg);
+  bool set_fields(E2SM_RC_ControlMessage_t *control_msg, e2sm_rc_slice_level_prb_quota_helper *helper);
 
   E2SM_RC_ControlHeader_t *rc_control_header;
   E2SM_RC_ControlMessage_t *rc_control_msg;
