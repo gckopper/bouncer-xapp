@@ -17,6 +17,8 @@
 */
 
 #include "xapp.hpp"
+#include <bits/types/time_t.h>
+#include <ctime>
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <string>
@@ -24,6 +26,7 @@
 #include <cpprest/filestream.h>
 #include <cpprest/uri.h>
 #include <cpprest/json.h>
+#include <unistd.h>
 
 #include "e2sm_subscription.hpp"
 
@@ -80,6 +83,8 @@ void Xapp::startup(SubscriptionHandler &sub_ref) {
 
 	//send subscriptions.
 	startup_subscribe_requests(); // throws std::exception
+
+    sleep(1);
 	
 	shutdown();
 	exit(0);
@@ -221,6 +226,9 @@ inline void Xapp::subscribe_request(string meid, jsonn subObject) {
 			std::string tmp;
 			tmp = jsonObject[U("SubscriptionId")].as_string();
 			subscription_map.emplace(std::make_pair(meid, tmp));
+            time_t now;
+            time(now);
+            std::cout << "\n Finished subscription flow: " << now << "\n";
 	});
 
 	try
@@ -395,7 +403,11 @@ void Xapp::startup_subscribe_requests(){
 		}
 
 		/* ============ Building and sending subscription requests ============ */
-		sleep(5);	// require to wait for registration to complete, and a pause between each subscription is also required
+		sleep(3);	// require to wait for registration to complete, and a pause between each subscription is also required
+
+        time_t now;
+        time(now);
+        std::cout << "\n Started subscription flow: " << now << "\n";
 
 		// jsonn jsonObject = build_rc_subscription_request(e2node.first);
 		jsonn jsonObject = build_kpm_subscription_request(e2node.first);
