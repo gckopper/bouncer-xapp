@@ -80,10 +80,13 @@ void Xapp::startup(SubscriptionHandler &sub_ref) {
 
 	//send subscriptions.
 	startup_subscribe_requests(); // throws std::exception
+	
+	shutdown();
+	exit(0);
 
 	//read A1 policies
-	startup_get_policies();
-	return;
+	//startup_get_policies();
+	//return;
 }
 
 void Xapp::start_xapp_receiver(XappMsgHandler& mp_handler, int threads){
