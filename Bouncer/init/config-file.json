@@ -5,8 +5,8 @@
             {
                 "name": "bouncer-xapp",
                 "image": {
-                    "registry": "example.com:80",
-                    "name": "bouncer",
+		    "registry": "docker.io",
+                    "name": "library/bouncer-xapp",
                     "tag": "latest"
                	}
             }
