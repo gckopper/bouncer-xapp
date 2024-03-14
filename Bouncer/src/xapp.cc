@@ -226,8 +226,8 @@ inline void Xapp::subscribe_request(string meid, jsonn subObject, const std::chr
 			tmp = jsonObject[U("SubscriptionId")].as_string();
 			subscription_map.emplace(std::make_pair(meid, tmp));
             const auto t2 = std::chrono::high_resolution_clock::now();
-            const auto int_ms = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
-            std::cout << "\nFinished subscription flow: " << int_ms << "\n";
+            const int int_ms = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
+            std::cout << "\nFinished subscription flow: " << int_ms.count() << "\n";
 	});
 
 	try
