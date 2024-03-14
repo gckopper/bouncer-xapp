@@ -87,7 +87,7 @@ private:
   void startup_get_policies(void );
   void startup_registration_request();
   void shutdown_deregistration_request();
-  inline void subscribe_request(string, jsonn);
+  inline void subscribe_request(string, jsonn, const std::chrono::time_point<std::chrono::high_resolution_clock>);
   inline void subscribe_delete_request(string);
   jsonn build_rc_subscription_request(string);
   jsonn build_kpm_subscription_request(string);
