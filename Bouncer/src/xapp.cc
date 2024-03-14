@@ -17,8 +17,7 @@
 */
 
 #include "xapp.hpp"
-#include <bits/types/time_t.h>
-#include <ctime>
+#include <chrono>
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <string>
@@ -186,7 +185,7 @@ void Xapp::shutdown_delete_subscriptions() {
 	}
 }
 
-inline void Xapp::subscribe_request(string meid, jsonn subObject) {
+inline void Xapp::subscribe_request(string meid, jsonn subObject, const std::chrono::time_point<std::chrono::high_resolution_clock> t1) {
 	mdclog_write(MDCLOG_INFO, "sending subscription to meid = %s", meid.c_str());
 
 	auto postJson = pplx::create_task([meid, subObject, this]() {
@@ -219,16 +218,16 @@ inline void Xapp::subscribe_request(string meid, jsonn subObject) {
 	})
 
 	// serialize the user details.
-	.then([meid, this](json::value jsonObject)
+	.then([meid, t1, this](json::value jsonObject)
 		{
 			std::cout << "\nReceived REST subscription response: " << jsonObject.serialize().c_str() << "\n\n";
 
 			std::string tmp;
 			tmp = jsonObject[U("SubscriptionId")].as_string();
 			subscription_map.emplace(std::make_pair(meid, tmp));
-            time_t now;
-            time(now);
-            std::cout << "\n Finished subscription flow: " << now << "\n";
+            const auto t2 = std::chrono::high_resolution_clock::now();
+            const auto int_ms = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
+            std::cout << "\nFinished subscription flow: " << int_ms << "\n";
 	});
 
 	try
@@ -405,13 +404,10 @@ void Xapp::startup_subscribe_requests(){
 		/* ============ Building and sending subscription requests ============ */
 		sleep(3);	// require to wait for registration to complete, and a pause between each subscription is also required
 
-        time_t now;
-        time(now);
-        std::cout << "\n Started subscription flow: " << now << "\n";
-
+        const auto t1 = std::chrono::high_resolution_clock::now();
 		// jsonn jsonObject = build_rc_subscription_request(e2node.first);
 		jsonn jsonObject = build_kpm_subscription_request(e2node.first);
-		subscribe_request(e2node.first, jsonObject); // this can be called only after the xApp has been registered
+		subscribe_request(e2node.first, jsonObject, t1); // this can be called only after the xApp has been registered
 		/* ==================================================================== */
 
 		if (!nodebid.empty()) {	// we only reach here when it's not empty when we found the nodebId to subscribe and we no longer need to iterate over the map
