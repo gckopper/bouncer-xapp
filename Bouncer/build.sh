@@ -1,5 +1,5 @@
 #!/bin/bash
 
-docker build -t bouncer-xapp .
-docker image save bouncer-xapp -o bouncer-xapp.tar
-sudo ctr -n k8s.io i import bouncer-xapp.tar
+docker build -t bouncer-oai .
+docker image save bouncer-oai -o bouncer-oai.tar
+sudo ctr -n k8s.io i import bouncer-oai.tar

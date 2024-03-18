@@ -1,9 +1,9 @@
  {
-        "xapp_name": "bouncer-xapp",
+        "xapp_name": "bouncer-oai",
         "version": "2.0.0",
         "containers": [
             {
-                "name": "bouncer-xapp",
+                "name": "bouncer-oai",
                 "image": {
 		    "registry": "docker.io",
                     "name": "library/bouncer-xapp",
@@ -15,13 +15,13 @@
             "ports": [
                 {
                     "name": "http",
-                    "container": "bouncer-xapp",
+                    "container": "bouncer-oai",
                     "port": 8080,
                     "description": "http service"
                 },
                 {
                     "name": "rmr-data",
-                    "container": "bouncer-xapp",
+                    "container": "bouncer-oai",
                     "port": 4560,
 
                     "rxMessages": ["RIC_SUB_RESP", "RIC_INDICATION","RIC_SUB_DEL_RESP","RIC","A1_POLICY_REQ"],
@@ -31,7 +31,7 @@
                 },
                 {
                     "name": "rmr-route",
-                    "container": "bouncer-xapp",
+                    "container": "bouncer-oai",
                     "port": 4561,
                     "description": "rmr route port for Bouncer xApp"
                 }

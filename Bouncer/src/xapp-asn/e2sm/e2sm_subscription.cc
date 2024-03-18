@@ -155,7 +155,7 @@ bool e2sm_subscription::set_fields(E2SM_KPM_ActionDefinition_t *action_def, e2sm
 	actdef_fmt1->granulPeriod = helper.action.granulPeriod;
 
 	// RSRP Measurement
-  std::vector<std::string> measurements = {"RSRP", "RSRQ", "CQI", "DRB.RlcPacketDropRateDl", "DRB.RlcSduTransmittedVolumeDL", "DRB.RlcSduTransmittedVolumeUL"};
+  std::vector<std::string> measurements = {"DRB.UEThpDl", "DRB.UEThpUl", "DRB.PrbTotDl"};
   for (std::string meas : measurements) {
     MeasurementInfoItem_t *minfo_1 = (MeasurementInfoItem_t *) calloc(1, sizeof(MeasurementInfoItem_t));
     minfo_1->measType.present = MeasurementType_PR_measName;

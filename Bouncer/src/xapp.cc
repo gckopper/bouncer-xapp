@@ -324,7 +324,7 @@ jsonn Xapp::build_kpm_subscription_request(string meid) {
 			{"SubscriptionId",""},
 			{"ClientEndpoint",{{"Host",http_addr},{"HTTPPort",http_port},{"RMRPort",rmr_port}}},
 			{"Meid",meid},
-			{"RANFunctionID",147},
+			{"RANFunctionID",2},
 			{"SubscriptionDetails",
 				{
 					{
