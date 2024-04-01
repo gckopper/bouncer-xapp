@@ -83,9 +83,8 @@ void Xapp::startup(SubscriptionHandler &sub_ref) {
 	//send subscriptions.
 	startup_subscribe_requests(); // throws std::exception
 
-    sleep(1);
-	
 	shutdown();
+    sleep(1);
 	exit(0);
 
 	//read A1 policies

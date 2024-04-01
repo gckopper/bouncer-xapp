@@ -256,7 +256,7 @@ void XappMsgHandler::operator()(rmr_mbuf_t *message, bool *resend)
 			}
             const auto t = chrono::high_resolution_clock::now();
             const auto int_us = chrono::duration_cast<std::chrono::microseconds>(t-start);
-            std::cout << "END" << int_us.count() << std::endl;
+            std::cout << "End: " << int_us.count() << "\n";
 			mdclog_write(MDCLOG_INFO, "KPM Indication measurement values: %s", ss.str().c_str());
 			// ######## end of specific for E2SM-KPM
 
