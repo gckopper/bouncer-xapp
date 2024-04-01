@@ -225,9 +225,6 @@ inline void Xapp::subscribe_request(string meid, jsonn subObject, const std::chr
 			std::string tmp;
 			tmp = jsonObject[U("SubscriptionId")].as_string();
 			subscription_map.emplace(std::make_pair(meid, tmp));
-            const auto t2 = std::chrono::high_resolution_clock::now();
-            const auto int_ms = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1);
-            std::cout << "\nFinished subscription flow: " << int_ms.count() << "\n";
 	});
 
 	try
@@ -405,6 +402,8 @@ void Xapp::startup_subscribe_requests(){
 		sleep(3);	// require to wait for registration to complete, and a pause between each subscription is also required
 
         const auto t1 = std::chrono::high_resolution_clock::now();
+        const auto int_us = chrono::duration_cast<std::chrono::microseconds>(t1-start);
+        std::cout << "\nStart: " << int_us.count() << "\n";
 		// jsonn jsonObject = build_rc_subscription_request(e2node.first);
 		jsonn jsonObject = build_kpm_subscription_request(e2node.first);
 		subscribe_request(e2node.first, jsonObject, t1); // this can be called only after the xApp has been registered
