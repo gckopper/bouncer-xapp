@@ -21,12 +21,10 @@
 #include <ostream>
 #include <sstream>
 #include <string>
-#include <chrono>
 
 #include "msgs_proc.hpp"
 #include "e2sm_indication.hpp"
 
-const auto start = std::chrono::high_resolution_clock::now();
 
 bool XappMsgHandler::encode_subscription_delete_request(unsigned char* buffer, ssize_t *buf_len){
 

@@ -42,6 +42,9 @@
 
 #define MAX_RMR_RECV_SIZE 2<<15
 
+#include <chrono>
+const auto start = std::chrono::high_resolution_clock::now();
+
 class XappMsgHandler{
 
 private:
